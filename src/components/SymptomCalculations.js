@@ -1,18 +1,66 @@
+import { symptomCombinations } from './SymptomCombinations';
 import { symptomWeights } from './SymptomWeights';
-import symptomCombinations from './SymptomCombinations';
-import drugHistoryWeights from './DrugHistoryWeights';
-import travelRiskFactors from './TravelRiskFactors';
-import riskFactorWeights from './RiskFactorWeights';
+import { riskFactorWeights } from './RiskFactorWeights';
+import { travelRiskFactors } from './TravelRiskFactors';
+import { drugHistoryWeights } from './DrugHistoryWeights';
 
 const CONFIDENCE_THRESHOLDS = {
   HIGH: 0.7,
-  MEDIUM: 0.4
+  MEDIUM: 0.4,
 };
 
-/**
- * Calculates diagnosis based on symptoms and other factors
- */
-export default function calculateDiagnosis(
+// Red flag symptoms requiring immediate attention
+const redFlagSymptoms = [
+  'chest pain',
+  'shortness of breath',
+  'severe headache',
+  'sudden vision loss',
+  'hemoptysis',
+  'severe abdominal pain',
+];
+
+// Helper function to normalize duration to days
+const normalizeDuration = (duration, unit) => {
+  const multipliers = {
+    days: 1,
+    weeks: 7,
+    months: 30,
+  };
+  return duration * (multipliers[unit.toLowerCase()] || 1);
+};
+
+// Helper function to categorize age
+const categorizeAge = (age) => {
+  const ageNum = parseInt(age);
+  if (ageNum <= 12) return 'child';
+  if (ageNum <= 18) return 'adolescent';
+  if (ageNum <= 65) return 'adult';
+  return 'elderly';
+};
+
+// Helper function to calculate modifiers
+const calculateModifiers = (data, factors) => {
+  return (
+    (data.durationFactors?.[factors.duration] || 1) *
+    (data.severityFactors?.[factors.severity] || 1) *
+    (data.ageFactors?.[factors.ageGroup] || 1) *
+    (data.genderFactors?.[factors.gender] || 1)
+  );
+};
+
+// Helper function to normalize scores to 0-100
+const normalizeScore = (score, maxScore) => {
+  return Math.min(100, Math.max(0, (score / maxScore) * 100));
+};
+
+// Helper function to assign confidence level
+const getConfidenceLevel = (probability) => {
+  if (probability >= CONFIDENCE_THRESHOLDS.HIGH) return 'High';
+  if (probability >= CONFIDENCE_THRESHOLDS.MEDIUM) return 'Medium';
+  return 'Low';
+};
+
+const calculateDiagnosis = (
   symptoms,
   duration,
   durationUnit,
@@ -22,275 +70,197 @@ export default function calculateDiagnosis(
   drugHistory,
   travelRegion,
   riskFactors
-) {
+) => {
   try {
     // Input validation
     if (!symptoms || symptoms.length === 0) {
       return { error: 'Please select at least one symptom' };
     }
 
-    // Normalize duration to days
+    // Normalize inputs
     const normalizedDuration = normalizeDuration(duration, durationUnit);
+    const durationCategory =
+      normalizedDuration <= 3 ? 'short' : normalizedDuration <= 14 ? 'medium' : 'long';
     const ageGroup = categorizeAge(age);
-
-    // Calculate scores using both combination and individual approaches
-    const diagnosisScores = calculateCompleteScores(symptoms, {
-      duration: normalizedDuration,
-      severity,
+    const factors = {
+      duration: durationCategory,
+      severity: severity.toLowerCase(),
       ageGroup,
-      gender
-    });
+      gender: gender.toLowerCase(),
+    };
 
-    // Apply additional factor weights
-    applyTravelRisks(diagnosisScores, travelRegion);
-    applyDrugHistory(diagnosisScores, drugHistory);
-    applyRiskFactors(diagnosisScores, riskFactors);
+    // Initialize disease scores
+    const diseaseScores = {};
+    const matchingFactors = {
+      combinationMatches: [],
+      symptomMatches: [],
+      riskFactorMatches: [],
+      travelRiskMatches: [],
+      drugHistoryMatches: [],
+    };
 
-    // Filter out diagnoses with zero scores
-    const filteredScores = Object.entries(diagnosisScores)
+    // Step 1: Score exact and partial symptom combinations
+    const symptomSet = new Set(symptoms);
+    const combinationKeys = Object.keys(symptomCombinations);
+    let combinationMatchScore = 0;
+
+    for (const comboKey of combinationKeys) {
+      const comboSymptoms = comboKey.split(', ').map((s) => s.trim());
+      const intersection = comboSymptoms.filter((s) => symptomSet.has(s));
+      const matchRatio = intersection.length / comboSymptoms.length;
+
+      if (intersection.length >= Math.min(2, comboSymptoms.length)) {
+        const isExactMatch = intersection.length === comboSymptoms.length;
+        matchingFactors.combinationMatches.push({
+          combination: comboKey,
+          matchedSymptoms: intersection,
+          isExactMatch,
+        });
+
+        const diseases = symptomCombinations[comboKey];
+        for (const [disease, weight] of Object.entries(diseases)) {
+          if (!diseaseScores[disease]) {
+            diseaseScores[disease] = { score: 0, factors: {} };
+          }
+          // High multiplier for combinations (50), scaled by match ratio
+          const comboScore = weight * matchRatio * (isExactMatch ? 50 : 30);
+          diseaseScores[disease].score += comboScore;
+          diseaseScores[disease].factors[`combo_${comboKey}`] = weight;
+          combinationMatchScore += comboScore;
+        }
+      }
+    }
+
+    // Step 2: Score individual symptoms
+    let symptomMatchScore = 0;
+    for (const symptom of symptoms) {
+      if (symptomWeights[symptom]) {
+        matchingFactors.symptomMatches.push(symptom);
+        const diseases = symptomWeights[symptom];
+        for (const [disease, data] of Object.entries(diseases)) {
+          if (!diseaseScores[disease]) {
+            diseaseScores[disease] = { score: 0, factors: {} };
+          }
+          const baseScore = data.weight;
+          const modifiers = calculateModifiers(data, factors);
+          // Lower multiplier for individual symptoms (10)
+          const symptomScore = baseScore * modifiers * 10;
+          diseaseScores[disease].score += symptomScore;
+          diseaseScores[disease].factors[`symptom_${symptom}`] = baseScore;
+          symptomMatchScore += symptomScore;
+        }
+      }
+    }
+
+    // Step 3: Apply risk factor weights
+    let riskFactorMatchScore = 0;
+    if (riskFactors && riskFactors.length) {
+      for (const factor of riskFactors) {
+        if (riskFactorWeights[factor]) {
+          matchingFactors.riskFactorMatches.push(factor);
+          const diseases = riskFactorWeights[factor];
+          for (const [disease, weight] of Object.entries(diseases)) {
+            if (!diseaseScores[disease]) {
+              diseaseScores[disease] = { score: 0, factors: {} };
+            }
+            // Moderate multiplier for risk factors (5)
+            const riskScore = weight * 5;
+            diseaseScores[disease].score += riskScore;
+            diseaseScores[disease].factors[`risk_${factor}`] = weight;
+            riskFactorMatchScore += riskScore;
+          }
+        }
+      }
+    }
+
+    // Step 4: Apply travel risk weights
+    let travelRiskMatchScore = 0;
+    if (travelRegion && travelRiskFactors[travelRegion]) {
+      matchingFactors.travelRiskMatches.push(travelRegion);
+      const diseases = travelRiskFactors[travelRegion];
+      for (const [disease, weight] of Object.entries(diseases)) {
+        if (!diseaseScores[disease]) {
+          diseaseScores[disease] = { score: 0, factors: {} };
+        }
+        // Moderate multiplier for travel risks (5)
+        const travelScore = weight * 5;
+        diseaseScores[disease].score += travelScore;
+        diseaseScores[disease].factors[`travel_${travelRegion}`] = weight;
+        travelRiskMatchScore += travelScore;
+      }
+    }
+
+    // Step 5: Apply drug history weights
+    let drugHistoryMatchScore = 0;
+    if (drugHistory && drugHistoryWeights[drugHistory]) {
+      matchingFactors.drugHistoryMatches.push(drugHistory);
+      const diseases = drugHistoryWeights[drugHistory];
+      for (const [disease, weight] of Object.entries(diseases)) {
+        if (!diseaseScores[disease]) {
+          diseaseScores[disease] = { score: 0, factors: {} };
+        }
+        // Small multiplier for drug history (3)
+        const drugScore = weight * 3;
+        diseaseScores[disease].score += drugScore;
+        diseaseScores[disease].factors[`drug_${drugHistory}`] = weight;
+        drugHistoryMatchScore += drugScore;
+      }
+    }
+
+    // Step 6: Check for red flag symptoms
+    const hasRedFlag = symptoms.some((symptom) => redFlagSymptoms.includes(symptom));
+
+    // Step 7: Normalize and prepare results
+    const maxPossibleScore = 1000; // Arbitrary max for normalization
+    const detailed = Object.entries(diseaseScores)
       .filter(([_, data]) => data.score > 0)
-      .reduce((acc, [disease, data]) => {
-        acc[disease] = data;
-        return acc;
-      }, {});
+      .map(([disease, data]) => {
+        let score = data.score;
+        // Boost red flag diseases if applicable
+        const isRedFlagDisease = [
+          'heart attack',
+          'pulmonary embolism',
+          'meningitis',
+          'appendicitis',
+        ].includes(disease);
+        if (hasRedFlag && isRedFlagDisease) {
+          score *= 1.5;
+        }
 
-    if (Object.keys(filteredScores).length === 0) {
+        const probability = normalizeScore(score, maxPossibleScore) / 100;
+        return {
+          diagnosis: disease,
+          probability: Math.round(probability * 100 * 10) / 10,
+          confidence: getConfidenceLevel(probability),
+          matchingFactors: {
+            symptomMatch: matchingFactors.symptomMatches.join(', ') || 'None',
+            riskFactorMatch: matchingFactors.riskFactorMatches.join(', ') || 'None',
+            travelRiskMatch: matchingFactors.travelRiskMatches.join(', ') || 'None',
+            drugHistoryMatch: matchingFactors.drugHistoryMatches.join(', ') || 'None',
+            combinationMatches: matchingFactors.combinationMatches.map((c) => ({
+              combination: c.combination,
+              matchedSymptoms: c.matchedSymptoms.join(', '),
+              isExactMatch: c.isExactMatch,
+            })),
+          },
+        };
+      })
+      .sort((a, b) => b.probability - a.probability);
+
+    if (detailed.length === 0) {
       return { error: 'No matching diagnoses found for the given symptoms' };
     }
 
-    const results = calculateFinalResults(filteredScores, symptoms, {
-      travelRegion,
-      riskFactors
-    });
-
     return {
-      detailed: results.map(result => ({
-        diagnosis: result.disease,
-        probability: Math.round(result.probability * 100),
-        confidence: getConfidenceLevel(result.probability),
-        matchingFactors: {
-          symptomMatch: result.factors.symptoms.join(', '),
-          riskFactorMatch: result.factors.risks.join(', '),
-          travelRiskMatch: result.factors.travel || 'None'
-        }
-      }))
+      detailed,
+      redFlag: hasRedFlag
+        ? 'Urgent: Seek immediate medical attention due to critical symptoms.'
+        : null,
     };
   } catch (error) {
     console.error('Calculation error:', error);
-    return { error: 'Error calculating diagnosis: ' + error.message };
+    return { error: `Error calculating diagnosis: ${error.message}` };
   }
-}
+};
 
-/**
- * Calculates complete scores using both combination and individual approaches
- */
-function calculateCompleteScores(symptoms, factors) {
-  const scores = {};
-  
-  // First try exact combinations
-  const exactMatches = findExactMatches(symptoms);
-  if (Object.keys(exactMatches).length > 0) {
-    Object.assign(scores, exactMatches);
-  }
-
-  // Then try partial combinations
-  const partialMatches = findPartialMatches(symptoms);
-  mergeScores(scores, partialMatches);
-
-  // Finally, evaluate individual symptoms
-  const individualScores = calculateIndividualScores(symptoms, factors);
-  mergeScores(scores, individualScores);
-
-  return scores;
-}
-
-/**
- * Finds exact matches in symptom combinations
- */
-function findExactMatches(symptoms) {
-  const sortedSymptoms = symptoms.sort().join(', ');
-  if (symptomCombinations[sortedSymptoms]) {
-    const matches = {};
-    Object.entries(symptomCombinations[sortedSymptoms]).forEach(([disease, weight]) => {
-      matches[disease] = {
-        score: weight,
-        matchingSymptoms: symptoms,
-        isExactMatch: true
-      };
-    });
-    return matches;
-  }
-  return {};
-}
-
-/**
- * Finds partial matches in symptom combinations
- */
-function findPartialMatches(symptoms) {
-  const matches = {};
-  const symptomSet = new Set(symptoms);
-
-  Object.entries(symptomCombinations).forEach(([combination, diseases]) => {
-    const combinationSymptoms = combination.split(', ');
-    const intersection = combinationSymptoms.filter(s => symptomSet.has(s));
-    
-    if (intersection.length >= Math.min(2, combinationSymptoms.length)) {
-      const matchRatio = intersection.length / combinationSymptoms.length;
-      
-      Object.entries(diseases).forEach(([disease, weight]) => {
-        if (!matches[disease]) {
-          matches[disease] = {
-            score: 0,
-            matchingSymptoms: []
-          };
-        }
-        matches[disease].score += weight * matchRatio;
-        matches[disease].matchingSymptoms.push(...intersection);
-      });
-    }
-  });
-
-  return matches;
-}
-
-/**
- * Calculates scores based on individual symptoms
- */
-function calculateIndividualScores(symptoms, factors) {
-  const scores = {};
-  
-  symptoms.forEach(symptom => {
-    if (symptomWeights[symptom]) {
-      Object.entries(symptomWeights[symptom]).forEach(([disease, data]) => {
-        if (!scores[disease]) {
-          scores[disease] = {
-            score: 0,
-            matchingSymptoms: []
-          };
-        }
-        
-        const baseScore = data.weight;
-        const modifiers = calculateModifiers(data, factors);
-        scores[disease].score += baseScore * modifiers;
-        scores[disease].matchingSymptoms.push(symptom);
-      });
-    }
-  });
-
-  return scores;
-}
-
-/**
- * Merges score objects, combining matching symptoms and adding scores
- */
-function mergeScores(target, source) {
-  Object.entries(source).forEach(([disease, data]) => {
-    if (!target[disease]) {
-      target[disease] = {
-        score: 0,
-        matchingSymptoms: []
-      };
-    }
-    target[disease].score += data.score;
-    target[disease].matchingSymptoms = [...new Set([
-      ...target[disease].matchingSymptoms,
-      ...data.matchingSymptoms
-    ])];
-  });
-}
-
-// [Previous helper functions remain the same]
-function normalizeDuration(duration, unit) {
-  const multipliers = {
-    days: 1,
-    weeks: 7,
-    months: 30
-  };
-  return duration * (multipliers[unit] || 1);
-}
-
-function categorizeAge(age) {
-  const ageNum = parseInt(age);
-  if (ageNum <= 12) return 'child';
-  if (ageNum <= 18) return 'adolescent';
-  if (ageNum <= 65) return 'adult';
-  return 'elderly';
-}
-
-function calculateModifiers(data, factors) {
-  return (
-    (data.durationFactors?.[factors.duration] || 1) *
-    (data.severityFactors?.[factors.severity] || 1) *
-    (data.ageFactors?.[factors.ageGroup] || 1) *
-    (data.genderFactors?.[factors.gender] || 1)
-  );
-}
-
-function applyTravelRisks(scores, region) {
-  if (!region || !travelRiskFactors[region]) return;
-
-  Object.entries(travelRiskFactors[region]).forEach(([disease, weight]) => {
-    if (!scores[disease]) {
-      scores[disease] = { score: 0, matchingSymptoms: [] };
-    }
-    scores[disease].score += weight;
-    scores[disease].travelRisk = region;
-  });
-}
-
-function applyDrugHistory(scores, drugs) {
-  if (!drugs) return;
-  
-  const drugList = Array.isArray(drugs) ? drugs : [drugs];
-  drugList.forEach(drug => {
-    if (drugHistoryWeights[drug]) {
-      Object.entries(drugHistoryWeights[drug]).forEach(([disease, weight]) => {
-        if (!scores[disease]) {
-          scores[disease] = { score: 0, matchingSymptoms: [] };
-        }
-        scores[disease].score += weight;
-      });
-    }
-  });
-}
-
-function applyRiskFactors(scores, factors) {
-  if (!factors || !factors.length) return;
-
-  factors.forEach(factor => {
-    if (riskFactorWeights[factor]) {
-      Object.entries(riskFactorWeights[factor]).forEach(([disease, weight]) => {
-        if (!scores[disease]) {
-          scores[disease] = { score: 0, matchingSymptoms: [] };
-        }
-        scores[disease].score += weight;
-        if (!scores[disease].riskFactors) {
-          scores[disease].riskFactors = [];
-        }
-        scores[disease].riskFactors.push(factor);
-      });
-    }
-  });
-}
-
-function calculateFinalResults(scores, symptoms, factors) {
-  const totalScore = Object.values(scores).reduce((sum, { score }) => sum + score, 0);
-  
-  return Object.entries(scores)
-    .map(([disease, data]) => ({
-      disease,
-      probability: totalScore > 0 ? data.score / totalScore : 0,
-      factors: {
-        symptoms: [...new Set(data.matchingSymptoms)],
-        risks: data.riskFactors || [],
-        travel: data.travelRisk || null
-      }
-    }))
-    .sort((a, b) => b.probability - a.probability);
-}
-
-function getConfidenceLevel(probability) {
-  if (probability >= CONFIDENCE_THRESHOLDS.HIGH) return 'High';
-  if (probability >= CONFIDENCE_THRESHOLDS.MEDIUM) return 'Medium';
-  return 'Low';
-}
+export default calculateDiagnosis;
