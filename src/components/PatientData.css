@@ -1,0 +1,45 @@
+.patient-data-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.select-container {
+  position: relative;
+}
+
+.select-dropdown {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background-color: #ffffff;
+  font-size: 1rem;
+  color: #1e293b;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.select-dropdown:focus {
+  outline: none;
+  border-color: #27c7b8;
+  box-shadow: 0 0 0 3px rgba(39, 199, 184, 0.1);
+}
+
+.select-dropdown option {
+  color: #1e293b;
+}
+
+@media (max-width: 640px) {
+  .patient-data-container {
+    padding: 1rem;
+  }
+
+  .select-dropdown {
+    font-size: 0.9375rem;
+    padding: 0.5rem;
+  }
+}
