@@ -290,3 +290,13 @@
     font-size: 0.8125rem;
   }
 }
+
+select[multiple] {
+  height: 100px;
+}
+
+.progress-bar {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+}
