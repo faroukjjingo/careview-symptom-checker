@@ -2,7 +2,7 @@ import { symptomWeights } from './SymptomWeights';
 import symptomCombinations from './SymptomCombinations';
 import drugHistoryWeights from './DrugHistoryWeights';
 import travelRiskFactors from './TravelRiskFactors';
-import { riskFactorWeights } from './RiskFactorWeights';
+import riskFactorWeights from './RiskFactorWeights';
 
 const CONFIDENCE_THRESHOLDS = {
   HIGH: 0.7,
