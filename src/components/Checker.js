@@ -14,13 +14,11 @@ const capitalizeWords = (str) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 
-const LoadingBar = ({ progress }) => {
-  return (
-    <div className="loading-bar-container">
-      <div className="loading-bar" style={{ width: `${progress}%` }}></div>
-    </div>
-  );
-};
+const LoadingBar = ({ progress }) => (
+  <div className="loading-bar-container">
+    <div className="loading-bar" style={{ width: `${progress}%` }}></div>
+  </div>
+);
 
 const DiagnosisCard = ({ diagnosis, index, isExpanded, onToggle }) => {
   const [fadeAnim, setFadeAnim] = useState(0);
@@ -31,7 +29,7 @@ const DiagnosisCard = ({ diagnosis, index, isExpanded, onToggle }) => {
       setFadeAnim(1);
       setSlideAnim(0);
     }, index * 200);
-  }, []);
+  }, [index]);
 
   const confidenceColor = {
     High: '#10b981',
@@ -45,6 +43,8 @@ const DiagnosisCard = ({ diagnosis, index, isExpanded, onToggle }) => {
     <div
       className="diagnosis-card"
       style={{ opacity: fadeAnim, transform: `translateY(${slideAnim}px)`, '--index': index }}
+      role="region"
+      aria-labelledby={`diagnosis-${index}`}
     >
       <div
         className="card-header"
@@ -52,12 +52,16 @@ const DiagnosisCard = ({ diagnosis, index, isExpanded, onToggle }) => {
           navigator.vibrate?.(50);
           onToggle();
         }}
+        role="button"
+        aria-expanded={isExpanded}
       >
         <div className="ranking-badge">
           <span className="ranking-text">{index + 1}</span>
         </div>
         <div className="header-content">
-          <h3 className="diagnosis-title">{capitalizeWords(diagnosis.diagnosis)}</h3>
+          <h3 className="diagnosis-title" id={`diagnosis-${index}`}>
+            {capitalizeWords(diagnosis.diagnosis)}
+          </h3>
           <div className="confidence-badge" style={{ backgroundColor: `${confidenceColor}20` }}>
             <span className="confidence-text" style={{ color: confidenceColor }}>
               {diagnosis.confidence} • {diagnosis.probability}% Match
@@ -89,7 +93,24 @@ const DiagnosisCard = ({ diagnosis, index, isExpanded, onToggle }) => {
                 <span className="factor-label">Travel Risk</span>
                 <p className="factor-value">{diagnosis.matchingFactors.travelRiskMatch}</p>
               </div>
+              <div className="factor-item">
+                <span className="factor-label">Drug History</span>
+                <p className="factor-value">{diagnosis.matchingFactors.drugHistoryMatch}</p>
+              </div>
             </div>
+            {diagnosis.matchingFactors.combinationMatches.length > 0 && (
+              <div className="combination-section">
+                <h4 className="section-title">Matched Combinations</h4>
+                <ul className="combination-list">
+                  {diagnosis.matchingFactors.combinationMatches.map((match, idx) => (
+                    <li key={idx} className="combination-item">
+                      {match.isExactMatch ? 'Exact' : 'Partial'} Match: {match.combination} (
+                      {match.matchedSymptoms})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -100,6 +121,7 @@ const DiagnosisCard = ({ diagnosis, index, isExpanded, onToggle }) => {
 const Checker = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
   const [diagnosis, setDiagnosis] = useState([]);
+  const [redFlag, setRedFlag] = useState(null);
   const [error, setError] = useState(null);
   const [patientInfo, setPatientInfo] = useState({
     age: '',
@@ -111,11 +133,44 @@ const Checker = () => {
   const [drugHistory, setDrugHistory] = useState('');
   const [travelRegion, setTravelRegion] = useState('');
   const [selectedRiskFactors, setSelectedRiskFactors] = useState([]);
-  const [openRiskFactors, setOpenRiskFactors] = useState(false);
-  const [openTravelRegion, setOpenTravelRegion] = useState(false);
+  const [language, setLanguage] = useState('en');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [expandedDiagnosis, setExpandedDiagnosis] = useState(null);
+
+  // Load cached data for offline support
+  useEffect(() => {
+    const cachedData = localStorage.getItem('checkerData');
+    if (cachedData) {
+      const { symptoms, patientInfo, drugHistory, travelRegion, riskFactors } =
+        JSON.parse(cachedData);
+      setSelectedSymptoms(symptoms || []);
+      setPatientInfo(patientInfo || {
+        age: '',
+        gender: '',
+        duration: '',
+        durationUnit: 'Days',
+        severity: '',
+      });
+      setDrugHistory(drugHistory || '');
+      setTravelRegion(travelRegion || '');
+      setSelectedRiskFactors(riskFactors || []);
+    }
+  }, []);
+
+  // Save data to localStorage
+  useEffect(() => {
+    localStorage.setItem(
+      'checkerData',
+      JSON.stringify({
+        symptoms: selectedSymptoms,
+        patientInfo,
+        drugHistory,
+        travelRegion,
+        riskFactors: selectedRiskFactors,
+      })
+    );
+  }, [selectedSymptoms, patientInfo, drugHistory, travelRegion, selectedRiskFactors]);
 
   const handleSymptomSelect = (updatedSymptoms) => {
     setSelectedSymptoms(updatedSymptoms);
@@ -144,6 +199,7 @@ const Checker = () => {
         clearInterval(interval);
         setIsAnalyzing(false);
         setDiagnosis(result.detailed.slice(0, 5));
+        setRedFlag(result.redFlag);
         navigator.vibrate?.([100, 50, 100]);
       }
     }, [1000, 800, 700][step] || 700);
@@ -157,7 +213,7 @@ const Checker = () => {
 
     const result = calculateDiagnosis(
       selectedSymptoms,
-      parseInt(patientInfo.duration),
+      parseInt(patientInfo.duration) || 1,
       patientInfo.durationUnit.toLowerCase(),
       patientInfo.severity.toLowerCase(),
       patientInfo.age,
@@ -181,6 +237,7 @@ const Checker = () => {
   const handleClear = () => {
     setSelectedSymptoms([]);
     setDiagnosis([]);
+    setRedFlag(null);
     setPatientInfo({
       age: '',
       gender: '',
@@ -195,22 +252,38 @@ const Checker = () => {
   };
 
   return (
-    <div className="checker-container">
-      <h1 className="title">Premium Symptom Analyzer</h1>
+    <div className="checker-container" lang={language}>
+      <header className="checker-header">
+        <h1 className="title">Advanced Symptom Analyzer</h1>
+        <select
+          className="language-selector"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          aria-label="Select language"
+        >
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+        </select>
+      </header>
+
+      {redFlag && (
+        <div className="red-flag-warning" role="alert">
+          <span className="warning-icon">⚠️</span>
+          <p className="warning-text">{redFlag}</p>
+        </div>
+      )}
 
       <SymptomInput
         onSelectSymptoms={handleSymptomSelect}
         patientInfo={patientInfo}
         onPatientInfoChange={handlePatientInfoChange}
+        language={language}
       />
 
       <RiskTravelSelector
-        openRiskFactors={openRiskFactors}
-        setOpenRiskFactors={setOpenRiskFactors}
         selectedRiskFactors={selectedRiskFactors}
         handleSelectRiskFactors={handleSelectRiskFactors}
-        openTravelRegion={openTravelRegion}
-        setOpenTravelRegion={setOpenTravelRegion}
         travelRegion={travelRegion}
         setTravelRegion={setTravelRegion}
         riskFactorWeights={riskFactorWeights}
@@ -224,7 +297,12 @@ const Checker = () => {
           color="#27c7b8"
           disabled={isAnalyzing}
         />
-        <CustomButton title="Clear All" onPress={handleClear} color="#FF6347" disabled={isAnalyzing} />
+        <CustomButton
+          title="Clear All"
+          onPress={handleClear}
+          color="#FF6347"
+          disabled={isAnalyzing}
+        />
       </div>
 
       {isAnalyzing && (
@@ -234,7 +312,11 @@ const Checker = () => {
         </div>
       )}
 
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      )}
 
       {diagnosis.length > 0 && !isAnalyzing && (
         <div className="results">
