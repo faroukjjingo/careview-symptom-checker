@@ -1,116 +1,83 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import SymptomInput from './SymptomInput';
 import calculateDiagnosis from './SymptomCalculations';
-import CustomButton from './CustomButton';
-import RiskTravelSelector from './RiskTravelSelector';
-import { guidance } from './guidance';
-import riskFactorWeights from './RiskFactorWeights';
-import travelRiskFactors from './TravelRiskFactors';
 import './Checker.css';
 
-const capitalizeWords = (str) =>
-  str
-    .split(' ')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-
-const LoadingBar = ({ progress }) => (
-  <div className="loading-bar-container">
-    <div className="loading-bar" style={{ width: `${progress}%` }}></div>
-  </div>
-);
-
 const DiagnosisCard = ({ diagnosis, index, isExpanded, onToggle }) => {
-  const [fadeAnim, setFadeAnim] = useState(0);
-  const [slideAnim, setSlideAnim] = useState(50);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setFadeAnim(1);
-      setSlideAnim(0);
-    }, index * 200);
-  }, [index]);
-
-  const confidenceColor = {
-    High: '#10b981',
-    Medium: '#f59e0b',
-    Low: '#ef4444',
-  }[diagnosis.confidence] || '#6b7280';
-
-  const guidanceContent = guidance[diagnosis.diagnosis]?.content;
+  const confidenceColor =
+    diagnosis.confidence === 'High'
+      ? 'bg-green-100 text-green-800'
+      : diagnosis.confidence === 'Medium'
+      ? 'bg-yellow-100 text-yellow-800'
+      : 'bg-red-100 text-red-800';
 
   return (
     <div
-      className="diagnosis-card"
-      style={{ opacity: fadeAnim, transform: `translateY(${slideAnim}px)`, '--index': index }}
+      className="bg-white shadow-md rounded-lg p-4 mb-4 transition-all duration-300"
       role="region"
       aria-labelledby={`diagnosis-${index}`}
     >
       <div
-        className="card-header"
-        onClick={() => {
-          navigator.vibrate?.(50);
-          onToggle();
-        }}
-        role="button"
-        aria-expanded={isExpanded}
+        className="flex justify-between items-center cursor-pointer"
+        onClick={() => onToggle(index)}
+        id={`diagnosis-${index}`}
       >
-        <div className="ranking-badge">
-          <span className="ranking-text">{index + 1}</span>
-        </div>
-        <div className="header-content">
-          <h3 className="diagnosis-title" id={`diagnosis-${index}`}>
-            {capitalizeWords(diagnosis.diagnosis)}
-          </h3>
-          <div className="confidence-badge" style={{ backgroundColor: `${confidenceColor}20` }}>
-            <span className="confidence-text" style={{ color: confidenceColor }}>
-              {diagnosis.confidence} • {diagnosis.probability}% Match
-            </span>
-          </div>
+        <h3 className="text-lg font-semibold text-gray-800">
+          {diagnosis.diagnosis}
+        </h3>
+        <div className="flex items-center space-x-2">
+          <span
+            className={`px-2 py-1 rounded-full text-sm font-medium ${confidenceColor}`}
+          >
+            {diagnosis.confidence}
+          </span>
+          <span className="text-gray-600">
+            {diagnosis.probability}% Likely
+          </span>
+          <span className="text-gray-500 text-xl">
+            {isExpanded ? '▲' : '▼'}
+          </span>
         </div>
       </div>
-
       {isExpanded && (
-        <div className="card-content">
-          {guidanceContent && (
-            <div className="guidance-section">
-              <h4 className="section-title">Medical Guidance</h4>
-              <p className="guidance-text">{guidanceContent}</p>
-            </div>
-          )}
-          <div className="matching-factors-section">
-            <h4 className="section-title">Diagnosis Factors</h4>
-            <div className="factor-grid">
-              <div className="factor-item">
-                <span className="factor-label">Symptom Match</span>
-                <p className="factor-value">{diagnosis.matchingFactors.symptomMatch}</p>
-              </div>
-              <div className="factor-item">
-                <span className="factor-label">Risk Factors</span>
-                <p className="factor-value">{diagnosis.matchingFactors.riskFactorMatch}</p>
-              </div>
-              <div className="factor-item">
-                <span className="factor-label">Travel Risk</span>
-                <p className="factor-value">{diagnosis.matchingFactors.travelRiskMatch}</p>
-              </div>
-              <div className="factor-item">
-                <span className="factor-label">Drug History</span>
-                <p className="factor-value">{diagnosis.matchingFactors.drugHistoryMatch}</p>
-              </div>
-            </div>
-            {diagnosis.matchingFactors.combinationMatches.length > 0 && (
-              <div className="combination-section">
-                <h4 className="section-title">Matched Combinations</h4>
-                <ul className="combination-list">
-                  {diagnosis.matchingFactors.combinationMatches.map((match, idx) => (
-                    <li key={idx} className="combination-item">
-                      {match.isExactMatch ? 'Exact' : 'Partial'} Match: {match.combination} (
-                      {match.matchedSymptoms})
-                    </li>
-                  ))}
-                </ul>
-              </div>
+        <div className="mt-4 text-gray-700">
+          <div className="mb-2">
+            <h4 className="font-medium">Explanation</h4>
+            <p>{diagnosis.explanation}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Source: {diagnosis.source}
+            </p>
+          </div>
+          <div className="mb-2">
+            <h4 className="font-medium">Matching Symptoms</h4>
+            <p>{diagnosis.matchingFactors.symptomMatch || 'None'}</p>
+          </div>
+          <div className="mb-2">
+            <h4 className="font-medium">Matching Combinations</h4>
+            {diagnosis.matchingFactors.combinationMatches.length > 0 ? (
+              diagnosis.matchingFactors.combinationMatches.map(
+                (combo, idx) => (
+                  <p key={idx}>
+                    {combo.combination} (
+                    {combo.isExactMatch ? 'Exact' : 'Partial'})
+                  </p>
+                )
+              )
+            ) : (
+              <p>None</p>
             )}
+          </div>
+          <div>
+            <h4 className="font-medium">Other Factors</h4>
+            <p>
+              Risk Factors: {diagnosis.matchingFactors.riskFactorMatch || 'None'}
+            </p>
+            <p>
+              Travel: {diagnosis.matchingFactors.travelRiskMatch || 'None'}
+            </p>
+            <p>
+              Drug History: {diagnosis.matchingFactors.drugHistoryMatch || 'None'}
+            </p>
           </div>
         </div>
       )}
@@ -120,9 +87,6 @@ const DiagnosisCard = ({ diagnosis, index, isExpanded, onToggle }) => {
 
 const Checker = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
-  const [diagnosis, setDiagnosis] = useState([]);
-  const [redFlag, setRedFlag] = useState(null);
-  const [error, setError] = useState(null);
   const [patientInfo, setPatientInfo] = useState({
     age: '',
     gender: '',
@@ -130,208 +94,186 @@ const Checker = () => {
     durationUnit: 'Days',
     severity: '',
   });
-  const [drugHistory, setDrugHistory] = useState('');
-  const [travelRegion, setTravelRegion] = useState('');
   const [selectedRiskFactors, setSelectedRiskFactors] = useState([]);
-  const [language, setLanguage] = useState('en');
+  const [travelRegion, setTravelRegion] = useState('');
+  const [drugHistory, setDrugHistory] = useState('');
+  const [diagnosis, setDiagnosis] = useState([]);
+  const [error, setError] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [expandedDiagnosis, setExpandedDiagnosis] = useState(null);
-
-  // Load cached data for offline support
-  useEffect(() => {
-    const cachedData = localStorage.getItem('checkerData');
-    if (cachedData) {
-      const { symptoms, patientInfo, drugHistory, travelRegion, riskFactors } =
-        JSON.parse(cachedData);
-      setSelectedSymptoms(symptoms || []);
-      setPatientInfo(patientInfo || {
-        age: '',
-        gender: '',
-        duration: '',
-        durationUnit: 'Days',
-        severity: '',
-      });
-      setDrugHistory(drugHistory || '');
-      setTravelRegion(travelRegion || '');
-      setSelectedRiskFactors(riskFactors || []);
-    }
-  }, []);
-
-  // Save data to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      'checkerData',
-      JSON.stringify({
-        symptoms: selectedSymptoms,
-        patientInfo,
-        drugHistory,
-        travelRegion,
-        riskFactors: selectedRiskFactors,
-      })
-    );
-  }, [selectedSymptoms, patientInfo, drugHistory, travelRegion, selectedRiskFactors]);
-
-  const handleSymptomSelect = (updatedSymptoms) => {
-    setSelectedSymptoms(updatedSymptoms);
-  };
+  const [expandedCard, setExpandedCard] = useState(null);
 
   const handlePatientInfoChange = (field, value) => {
     setPatientInfo((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSelectRiskFactors = (value) => {
-    setSelectedRiskFactors(value || []);
+  const handleSymptomSelect = (symptoms) => {
+    setSelectedSymptoms(symptoms);
   };
 
-  const simulateAnalysis = (result) => {
-    setIsAnalyzing(true);
-    setProgress(0);
-
-    const intervals = [60, 85, 100];
-    let step = 0;
-
-    const interval = setInterval(() => {
-      if (step < intervals.length) {
-        setProgress(intervals[step]);
-        step++;
-      } else {
-        clearInterval(interval);
-        setIsAnalyzing(false);
-        setDiagnosis(result.detailed.slice(0, 5));
-        setRedFlag(result.redFlag);
-        navigator.vibrate?.([100, 50, 100]);
-      }
-    }, [1000, 800, 700][step] || 700);
-  };
-
-  const handleCheckDiagnosis = () => {
+  const handleCheckDiagnosis = async () => {
     if (selectedSymptoms.length === 0) {
-      alert('Please select at least one symptom.');
-      return;
-    }
-
-    const result = calculateDiagnosis(
-      selectedSymptoms,
-      parseInt(patientInfo.duration) || 1,
-      patientInfo.durationUnit.toLowerCase(),
-      patientInfo.severity.toLowerCase(),
-      patientInfo.age,
-      patientInfo.gender.toLowerCase(),
-      drugHistory,
-      travelRegion,
-      selectedRiskFactors
-    );
-
-    if (result.error) {
-      setError(result.error);
+      setError('Please select at least one symptom.');
       setDiagnosis([]);
-      alert(result.error);
       return;
     }
 
+    setIsAnalyzing(true);
     setError(null);
-    simulateAnalysis(result);
+
+    try {
+      const result = await calculateDiagnosis(
+        selectedSymptoms,
+        parseInt(patientInfo.duration) || 1,
+        patientInfo.durationUnit,
+        patientInfo.severity,
+        patientInfo.age,
+        patientInfo.gender,
+        drugHistory,
+        travelRegion,
+        selectedRiskFactors
+      );
+
+      if (result.error) {
+        setError(result.error);
+        setDiagnosis([]);
+        return;
+      }
+
+      setDiagnosis(result.detailed);
+      if (result.redFlag) {
+        setError(result.redFlag);
+      }
+    } catch (err) {
+      setError('Error analyzing symptoms. Please try again.');
+      setDiagnosis([]);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
-  const handleClear = () => {
-    setSelectedSymptoms([]);
-    setDiagnosis([]);
-    setRedFlag(null);
-    setPatientInfo({
-      age: '',
-      gender: '',
-      duration: '',
-      durationUnit: 'Days',
-      severity: '',
-    });
-    setDrugHistory('');
-    setTravelRegion('');
-    setSelectedRiskFactors([]);
-    setError(null);
+  const toggleCard = (index) => {
+    setExpandedCard(expandedCard === index ? null : index);
   };
 
   return (
-    <div className="checker-container" lang={language}>
-      <header className="checker-header">
-        <h1 className="title">Advanced Symptom Analyzer</h1>
-        <select
-          className="language-selector"
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          aria-label="Select language"
-        >
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="fr">Français</option>
-        </select>
-      </header>
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
+      <div className="w-full max-w-3xl">
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-gray-800">
+            Symptom Checker
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Enter your symptoms to get a potential diagnosis
+          </p>
+        </header>
 
-      {redFlag && (
-        <div className="red-flag-warning" role="alert">
-          <span className="warning-icon">⚠️</span>
-          <p className="warning-text">{redFlag}</p>
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <SymptomInput
+            onSelectSymptoms={handleSymptomSelect}
+            patientInfo={patientInfo}
+            onPatientInfoChange={handlePatientInfoChange}
+          />
+
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Additional Factors
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Risk Factors
+                </label>
+                <select
+                  multiple
+                  className="w-full p-2 border rounded-md"
+                  value={selectedRiskFactors}
+                  onChange={(e) =>
+                    setSelectedRiskFactors(
+                      Array.from(e.target.selectedOptions, (option) => option.value)
+                    )
+                  }
+                >
+                  <option value="smoking">Smoking</option>
+                  <option value="diabetes">Diabetes</option>
+                  <option value="hypertension">Hypertension</option>
+                  <option value="obesity">Obesity</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Travel Region
+                </label>
+                <select
+                  className="w-full p-2 border rounded-md"
+                  value={travelRegion}
+                  onChange={(e) => setTravelRegion(e.target.value)}
+                >
+                  <option value="">None</option>
+                  <option value="sub_saharan_africa">Sub-Saharan Africa</option>
+                  <option value="southeast_asia">Southeast Asia</option>
+                  <option value="south_america">South America</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Drug History
+                </label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded-md"
+                  value={drugHistory}
+                  onChange={(e) => setDrugHistory(e.target.value)}
+                  placeholder="e.g., Steroids, Antidepressants"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleCheckDiagnosis}
+            disabled={isAnalyzing}
+            className={`w-full mt-6 py-3 px-4 rounded-md text-white font-semibold transition-colors ${
+              isAnalyzing
+                ? 'bg-blue-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+          >
+            {isAnalyzing ? 'Analyzing...' : 'Analyze Symptoms'}
+          </button>
         </div>
-      )}
 
-      <SymptomInput
-        onSelectSymptoms={handleSymptomSelect}
-        patientInfo={patientInfo}
-        onPatientInfoChange={handlePatientInfoChange}
-        language={language}
-      />
+        {error && (
+          <div
+            className="bg-red-100 text-red-800 p-4 rounded-md mb-6"
+            role="alert"
+          >
+            {error}
+          </div>
+        )}
 
-      <RiskTravelSelector
-        selectedRiskFactors={selectedRiskFactors}
-        handleSelectRiskFactors={handleSelectRiskFactors}
-        travelRegion={travelRegion}
-        setTravelRegion={setTravelRegion}
-        riskFactorWeights={riskFactorWeights}
-        travelRiskFactors={travelRiskFactors}
-      />
-
-      <div className="button-container">
-        <CustomButton
-          title={isAnalyzing ? 'Analyzing Symptoms...' : 'Analyze Symptoms'}
-          onPress={handleCheckDiagnosis}
-          color="#27c7b8"
-          disabled={isAnalyzing}
-        />
-        <CustomButton
-          title="Clear All"
-          onPress={handleClear}
-          color="#FF6347"
-          disabled={isAnalyzing}
-        />
+        {diagnosis.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Diagnosis Results
+            </h2>
+            {isAnalyzing ? (
+              <div className="flex justify-center items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
+              diagnosis.map((diag, index) => (
+                <DiagnosisCard
+                  key={index}
+                  diagnosis={diag}
+                  index={index}
+                  isExpanded={expandedCard === index}
+                  onToggle={toggleCard}
+                />
+              ))
+            )}
+          </div>
+        )}
       </div>
-
-      {isAnalyzing && (
-        <div className="analyzing-container">
-          <LoadingBar progress={progress} />
-          <p className="analyzing-text">Analyzing symptoms and risk factors...</p>
-        </div>
-      )}
-
-      {error && (
-        <p className="error-text" role="alert">
-          {error}
-        </p>
-      )}
-
-      {diagnosis.length > 0 && !isAnalyzing && (
-        <div className="results">
-          <h2 className="results-title">Diagnostic Analysis Results</h2>
-          {diagnosis.map((item, index) => (
-            <DiagnosisCard
-              key={index}
-              diagnosis={item}
-              index={index}
-              isExpanded={expandedDiagnosis === index}
-              onToggle={() => setExpandedDiagnosis(expandedDiagnosis === index ? null : index)}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 };
