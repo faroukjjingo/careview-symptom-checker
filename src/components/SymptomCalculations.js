@@ -1,5 +1,5 @@
 import { symptomWeights } from './SymptomWeights';
-import { symptomCombinations } from './SymptomCombinations';
+import symptomCombinations from './SymptomCombinations';
 import drugHistoryWeights from './DrugHistoryWeights';
 import { travelRiskFactors } from './TravelRiskFactors';
 import { riskFactorWeights } from './RiskFactorWeights';
