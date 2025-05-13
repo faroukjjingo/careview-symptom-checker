@@ -1,26 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
 import './SymptomInput.css';
 
-const Select = ({ label, value, options, onSelect, placeholder, id }) => {
+const Select = ({ label, value, options, onSelect, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="input-group">
-      {label && (
-        <label className="label" htmlFor={id}>
-          {label}
-        </label>
-      )}
+      {label && <label className="label">{label}</label>}
       <div
         className="select-button"
         onClick={() => setIsOpen(!isOpen)}
         role="combobox"
         aria-expanded={isOpen}
-        aria-controls={`${id}-options`}
-        tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && setIsOpen(!isOpen)}
       >
         <span className={value ? 'select-text' : 'placeholder-text'}>
           {value || placeholder}
@@ -29,7 +22,7 @@ const Select = ({ label, value, options, onSelect, placeholder, id }) => {
       </div>
 
       {isOpen && (
-        <div className="options-container" id={`${id}-options`}>
+        <div className="options-container">
           {options.map((option) => (
             <div
               key={option}
@@ -40,8 +33,6 @@ const Select = ({ label, value, options, onSelect, placeholder, id }) => {
               }}
               role="option"
               aria-selected={value === option}
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && (onSelect(option), setIsOpen(false))}
             >
               <span className={`option-text ${value === option ? 'selected-option-text' : ''}`}>
                 {option}
@@ -55,77 +46,10 @@ const Select = ({ label, value, options, onSelect, placeholder, id }) => {
   );
 };
 
-const BodyMap = ({ onRegionSelect, selectedRegion }) => {
-  const regions = [
-    { id: 'head', label: 'Head' },
-    { id: 'chest', label: 'Chest' },
-    { id: 'abdomen', label: 'Abdomen' },
-    { id: 'limbs', label: 'Arms/Legs' },
-    { id: 'general', label: 'General' },
-  ];
-
-  return (
-    <div className="body-map-container">
-      <h3 className="body-map-title">Select Body Region (Optional)</h3>
-      <div className="body-map">
-        {regions.map((region) => (
-          <button
-            key={region.id}
-            className={`body-region ${selectedRegion === region.id ? 'selected' : ''}`}
-            onClick={() => onRegionSelect(region.id)}
-            aria-label={`Select ${region.label} region`}
-            aria-pressed={selectedRegion === region.id}
-          >
-            {region.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, language = 'en' }) => {
+const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) => {
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
-  const [selectedRegion, setSelectedRegion] = useState(null);
-  const [errors, setErrors] = useState({ age: '', duration: '' });
-
-  // Validate inputs
-  const validateInput = (field, value) => {
-    if (field === 'age') {
-      const num = parseInt(value);
-      if (value && (isNaN(num) || num < 0 || num > 120)) {
-        setErrors((prev) => ({ ...prev, age: 'Enter a valid age (0-120)' }));
-      } else {
-        setErrors((prev) => ({ ...prev, age: '' }));
-      }
-    }
-    if (field === 'duration') {
-      const num = parseInt(value);
-      if (value && (isNaN(num) || num < 0)) {
-        setErrors((prev) => ({ ...prev, duration: 'Enter a valid duration (0+)' }));
-      } else {
-        setErrors((prev) => ({ ...prev, duration: '' }));
-      }
-    }
-  };
-
-  const getSymptomDisplay = (symptom) => {
-    if (Array.isArray(symptomList)) {
-      return symptom;
-    }
-    return symptomList[symptom]?.[language] || symptomList[symptom]?.en || symptom;
-  };
-
-  const getSymptomKey = (symptom) => {
-    if (Array.isArray(symptomList)) {
-      return symptom;
-    }
-    return Object.keys(symptomList).find(
-      (key) => symptomList[key][language] === symptom || symptomList[key].en === symptom
-    ) || symptom;
-  };
 
   const handleInputChange = (e) => {
     const text = e.target.value;
@@ -137,44 +61,28 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
     }
 
     // Handle both array and object-based symptomList
-    let availableSymptoms = Array.isArray(symptomList)
+    const availableSymptoms = Array.isArray(symptomList)
       ? symptomList
-      : Object.keys(symptomList).map((key) => ({
-          key,
-          display: symptomList[key][language] || symptomList[key].en || key,
-          region: symptomList[key].region || 'general',
-        }));
+      : Object.keys(symptomList);
 
     // Filter symptoms
     const filteredSymptoms = availableSymptoms
-      .filter((symptom) => {
-        const display = Array.isArray(symptomList) ? symptom : symptom.display;
-        const region = Array.isArray(symptomList) ? 'general' : symptom.region;
-        return (
-          display.toLowerCase().includes(text.toLowerCase()) &&
-          !selectedSymptoms.includes(
-            Array.isArray(symptomList) ? symptom : symptom.key
-          ) &&
-          (!selectedRegion || region === selectedRegion)
-        );
-      })
-      .slice(0, 8); // Increased limit for better UX
+      .filter(
+        (symptom) =>
+          symptom.toLowerCase().includes(text.toLowerCase()) &&
+          !selectedSymptoms.includes(symptom)
+      )
+      .slice(0, 8);
 
     // Filter combinations
     const combinationKeys = Object.keys(symptomCombinations);
     const filteredCombinations = combinationKeys
       .filter((combination) => {
         const symptoms = combination.split(', ');
-        const displaySymptoms = symptoms.map((s) => getSymptomDisplay(s));
         return (
-          displaySymptoms.some((s) => s.toLowerCase().includes(text.toLowerCase())) &&
-          symptoms.some((s) => !selectedSymptoms.includes(s)) &&
-          (!selectedRegion ||
-            symptoms.every(
-              (s) =>
-                Array.isArray(symptomList) ||
-                symptomList[s]?.region === selectedRegion
-            ))
+          symptoms.some((symptom) =>
+            symptom.toLowerCase().includes(text.toLowerCase())
+          ) && symptoms.some((symptom) => !selectedSymptoms.includes(symptom))
         );
       })
       .slice(0, 4);
@@ -182,23 +90,16 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
     const combinedSuggestions = [
       ...filteredCombinations.map((combination) => ({
         type: 'combination',
-        text: combination
-          .split(', ')
-          .map((s) => getSymptomDisplay(s))
-          .join(', '),
+        text: combination,
         symptoms: combination.split(', '),
       })),
       ...filteredSymptoms.map((symptom) => ({
         type: 'single',
-        text: Array.isArray(symptomList) ? symptom : symptom.display,
-        symptomKey: Array.isArray(symptomList) ? symptom : symptom.key,
+        text: symptom,
       })),
     ];
 
     setSuggestions(combinedSuggestions);
-
-    // Debug logging
-    console.log('Input:', text, 'Suggestions:', combinedSuggestions);
   };
 
   const handleSymptomSelect = (suggestion) => {
@@ -206,7 +107,7 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
     if (suggestion.type === 'combination') {
       symptomsToAdd = suggestion.symptoms;
     } else {
-      symptomsToAdd = [suggestion.symptomKey];
+      symptomsToAdd = [suggestion.text];
     }
 
     const uniqueNewSymptoms = symptomsToAdd.filter(
@@ -229,38 +130,17 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
     onSelectSymptoms(updatedSymptoms);
   };
 
-  const handleRegionSelect = (region) => {
-    setSelectedRegion(selectedRegion === region ? null : region);
-    setSuggestions([]);
-    setInput('');
-  };
-
   return (
     <div className="symptom-input-container">
-      <BodyMap onRegionSelect={handleRegionSelect} selectedRegion={selectedRegion} />
-
       <div className="input-group">
-        <label className="label" htmlFor="age-input">
-          Age
-        </label>
+        <label className="label">Age</label>
         <input
-          id="age-input"
-          className={`input ${errors.age ? 'input-error' : ''}`}
+          className="input"
           placeholder="Enter your age"
           type="number"
           value={patientInfo.age}
-          onChange={(e) => {
-            onPatientInfoChange('age', e.target.value);
-            validateInput('age', e.target.value);
-          }}
-          aria-invalid={!!errors.age}
-          aria-describedby={errors.age ? 'age-error' : undefined}
+          onChange={(e) => onPatientInfoChange('age', e.target.value)}
         />
-        {errors.age && (
-          <span className="error-text" id="age-error">
-            {errors.age}
-          </span>
-        )}
       </div>
 
       <Select
@@ -269,15 +149,11 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
         options={['Male', 'Female', 'Other']}
         onSelect={(value) => onPatientInfoChange('gender', value)}
         placeholder="Select your gender"
-        id="gender-select"
       />
 
       <div className="input-group">
-        <label className="label" htmlFor="symptom-input">
-          Symptoms
-        </label>
+        <label className="label">Symptoms</label>
         <input
-          id="symptom-input"
           className="input"
           placeholder="Type to search symptoms..."
           value={input}
@@ -317,16 +193,12 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
           <div className="selected-container">
             {selectedSymptoms.map((symptom) => (
               <div key={symptom} className="selected-symptom">
-                <span className="selected-symptom-text">
-                  {getSymptomDisplay(symptom)}
-                </span>
+                <span className="selected-symptom-text">{symptom}</span>
                 <span
                   className="remove-icon"
                   onClick={() => removeSymptom(symptom)}
                   role="button"
-                  aria-label={`Remove ${getSymptomDisplay(symptom)}`}
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && removeSymptom(symptom)}
+                  aria-label={`Remove ${symptom}`}
                 >
                   ✕
                 </span>
@@ -338,65 +210,34 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
 
       <div className="row-container">
         <div className="input-group duration-input">
-          <label className="label" htmlFor="duration-input">
-            Duration
-          </label>
+          <label className="label">Duration</label>
           <input
-            id="duration-input"
-            className={`input ${errors.duration ? 'input-error' : ''}`}
+            className="input"
             placeholder="Enter number"
             type="number"
             value={patientInfo.duration}
-            onChange={(e) => {
-              onPatientInfoChange('duration', e.target.value);
-              validateInput('duration', e.target.value);
-            }}
-            aria-invalid={!!errors.duration}
-            aria-describedby={errors.duration ? 'duration-error' : undefined}
+            onChange={(e) => onPatientInfoChange('duration', e.target.value)}
           />
-          {errors.duration && (
-            <span className="error-text" id="duration-error">
-              {errors.duration}
-            </span>
-          )}
         </div>
 
         <div className="input-group duration-unit">
-          <label className="label" htmlFor="duration-unit-select">
-            Duration Unit
-          </label>
+          <label className="label">Duration Unit</label>
           <Select
             value={patientInfo.durationUnit}
             options={['Days', 'Weeks', 'Months']}
             onSelect={(value) => onPatientInfoChange('durationUnit', value)}
             placeholder="Unit"
-            id="duration-unit-select"
           />
         </div>
       </div>
 
-      <div className="input-group">
-        <label className="label" htmlFor="severity-slider">
-          Severity (1-10)
-        </label>
-        <input
-          id="severity-slider"
-          type="range"
-          min="1"
-          max="10"
-          value={patientInfo.severity || 1}
-          onChange={(e) => onPatientInfoChange('severity', e.target.value)}
-          className="severity-slider"
-          aria-valuemin="1"
-          aria-valuemax="10"
-          aria-valuenow={patientInfo.severity || 1}
-        />
-        <div className="severity-labels">
-          <span>1 (Mild)</span>
-          <span>{patientInfo.severity || 1}</span>
-          <span>10 (Severe)</span>
-        </div>
-      </div>
+      <Select
+        label="Severity"
+        value={patientInfo.severity}
+        options={['Mild', 'Moderate', 'Severe']}
+        onSelect={(value) => onPatientInfoChange('severity', value)}
+        placeholder="Select severity level"
+      />
     </div>
   );
 };
