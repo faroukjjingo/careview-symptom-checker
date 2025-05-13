@@ -55,24 +55,26 @@ const Select = ({ label, value, options, onSelect, placeholder, id }) => {
   );
 };
 
-const BodyMap = ({ onRegionSelect }) => {
+const BodyMap = ({ onRegionSelect, selectedRegion }) => {
   const regions = [
     { id: 'head', label: 'Head' },
     { id: 'chest', label: 'Chest' },
     { id: 'abdomen', label: 'Abdomen' },
     { id: 'limbs', label: 'Arms/Legs' },
+    { id: 'general', label: 'General' },
   ];
 
   return (
     <div className="body-map-container">
-      <h3 className="body-map-title">Select Body Region</h3>
+      <h3 className="body-map-title">Select Body Region (Optional)</h3>
       <div className="body-map">
         {regions.map((region) => (
           <button
             key={region.id}
-            className="body-region"
+            className={`body-region ${selectedRegion === region.id ? 'selected' : ''}`}
             onClick={() => onRegionSelect(region.id)}
             aria-label={`Select ${region.label} region`}
+            aria-pressed={selectedRegion === region.id}
           >
             {region.label}
           </button>
@@ -82,7 +84,7 @@ const BodyMap = ({ onRegionSelect }) => {
   );
 };
 
-const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, language }) => {
+const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, language = 'en' }) => {
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
@@ -109,58 +111,94 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
     }
   };
 
+  const getSymptomDisplay = (symptom) => {
+    if (Array.isArray(symptomList)) {
+      return symptom;
+    }
+    return symptomList[symptom]?.[language] || symptomList[symptom]?.en || symptom;
+  };
+
+  const getSymptomKey = (symptom) => {
+    if (Array.isArray(symptomList)) {
+      return symptom;
+    }
+    return Object.keys(symptomList).find(
+      (key) => symptomList[key][language] === symptom || symptomList[key].en === symptom
+    ) || symptom;
+  };
+
   const handleInputChange = (e) => {
     const text = e.target.value;
     setInput(text);
-    if (text.trim()) {
-      const filteredSymptoms = Object.keys(symptomList)
-        .filter(
-          (symptom) =>
-            symptomList[symptom][language]
-              .toLowerCase()
-              .includes(text.toLowerCase()) &&
-            !selectedSymptoms.includes(symptom) &&
-            (!selectedRegion || symptomList[symptom].region === selectedRegion)
-        )
-        .slice(0, 5);
 
-      const combinationKeys = Object.keys(symptomCombinations);
-      const filteredCombinations = combinationKeys
-        .filter((combination) => {
-          const symptoms = combination.split(', ');
-          return (
-            symptoms.some((symptom) =>
-              symptomList[symptom]?.[language]
-                ?.toLowerCase()
-                .includes(text.toLowerCase())
-            ) &&
-            symptoms.some((symptom) => !selectedSymptoms.includes(symptom)) &&
-            (!selectedRegion ||
-              symptoms.every((symptom) => symptomList[symptom]?.region === selectedRegion))
-          );
-        })
-        .slice(0, 5);
-
-      const combinedSuggestions = [
-        ...filteredCombinations.map((combination) => ({
-          type: 'combination',
-          text: combination
-            .split(', ')
-            .map((s) => symptomList[s]?.[language] || s)
-            .join(', '),
-          symptoms: combination.split(', '),
-        })),
-        ...filteredSymptoms.map((symptom) => ({
-          type: 'single',
-          text: symptomList[symptom][language],
-          symptomKey: symptom,
-        })),
-      ];
-
-      setSuggestions(combinedSuggestions);
-    } else {
+    if (!text.trim()) {
       setSuggestions([]);
+      return;
     }
+
+    // Handle both array and object-based symptomList
+    let availableSymptoms = Array.isArray(symptomList)
+      ? symptomList
+      : Object.keys(symptomList).map((key) => ({
+          key,
+          display: symptomList[key][language] || symptomList[key].en || key,
+          region: symptomList[key].region || 'general',
+        }));
+
+    // Filter symptoms
+    const filteredSymptoms = availableSymptoms
+      .filter((symptom) => {
+        const display = Array.isArray(symptomList) ? symptom : symptom.display;
+        const region = Array.isArray(symptomList) ? 'general' : symptom.region;
+        return (
+          display.toLowerCase().includes(text.toLowerCase()) &&
+          !selectedSymptoms.includes(
+            Array.isArray(symptomList) ? symptom : symptom.key
+          ) &&
+          (!selectedRegion || region === selectedRegion)
+        );
+      })
+      .slice(0, 8); // Increased limit for better UX
+
+    // Filter combinations
+    const combinationKeys = Object.keys(symptomCombinations);
+    const filteredCombinations = combinationKeys
+      .filter((combination) => {
+        const symptoms = combination.split(', ');
+        const displaySymptoms = symptoms.map((s) => getSymptomDisplay(s));
+        return (
+          displaySymptoms.some((s) => s.toLowerCase().includes(text.toLowerCase())) &&
+          symptoms.some((s) => !selectedSymptoms.includes(s)) &&
+          (!selectedRegion ||
+            symptoms.every(
+              (s) =>
+                Array.isArray(symptomList) ||
+                symptomList[s]?.region === selectedRegion
+            ))
+        );
+      })
+      .slice(0, 4);
+
+    const combinedSuggestions = [
+      ...filteredCombinations.map((combination) => ({
+        type: 'combination',
+        text: combination
+          .split(', ')
+          .map((s) => getSymptomDisplay(s))
+          .join(', '),
+        symptoms: combination.split(', '),
+      })),
+      ...filteredSymptoms.map((symptom) => ({
+        type: 'single',
+        text: Array.isArray(symptomList) ? symptom : symptom.display,
+        symptomKey: Array.isArray(symptomList) ? symptom : symptom.key,
+      })),
+    ];
+
+    setSuggestions(combinedSuggestions);
+
+    // Debug logging
+    console.log('Input:', text, 'Suggestions:', combinedSuggestions);
   };
 
   const handleSymptomSelect = (suggestion) => {
@@ -192,14 +230,14 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
   };
 
   const handleRegionSelect = (region) => {
-    setSelectedRegion(region === selectedRegion ? null : region);
+    setSelectedRegion(selectedRegion === region ? null : region);
     setSuggestions([]);
     setInput('');
   };
 
   return (
     <div className="symptom-input-container">
-      <BodyMap onRegionSelect={handleRegionSelect} />
+      <BodyMap onRegionSelect={handleRegionSelect} selectedRegion={selectedRegion} />
 
       <div className="input-group">
         <label className="label" htmlFor="age-input">
@@ -280,13 +318,13 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange, lang
             {selectedSymptoms.map((symptom) => (
               <div key={symptom} className="selected-symptom">
                 <span className="selected-symptom-text">
-                  {symptomList[symptom]?.[language] || symptom}
+                  {getSymptomDisplay(symptom)}
                 </span>
                 <span
                   className="remove-icon"
                   onClick={() => removeSymptom(symptom)}
                   role="button"
-                  aria-label={`Remove ${symptomList[symptom]?.[language] || symptom}`}
+                  aria-label={`Remove ${getSymptomDisplay(symptom)}`}
                   tabIndex={0}
                   onKeyDown={(e) => e.key === 'Enter' && removeSymptom(symptom)}
                 >
