@@ -4,8 +4,8 @@ import calculateDiagnosis from './SymptomCalculations';
 import CustomButton from './CustomButton';
 import RiskTravelSelector from './RiskTravelSelector';
 import { guidance } from './guidance';
-import { riskFactorWeights } from './RiskFactorWeights';
-import { travelRiskFactors } from './TravelRiskFactors';
+import riskFactorWeights from './RiskFactorWeights';
+import travelRiskFactors from './TravelRiskFactors';
 import './Checker.css';
 
 const capitalizeWords = (str) =>
