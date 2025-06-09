@@ -223,7 +223,7 @@ const Checker = () => {
     <Box sx={{ maxWidth: 800, margin: '0 auto', padding: 2 }}>
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h4" gutterBottom>
-          Symptom Checker
+          CareView
         </Typography>
         <Typography variant="body1" color="text.secondary">
           Enter your symptoms to get a potential diagnosis
