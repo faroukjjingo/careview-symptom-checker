@@ -1,53 +1,46 @@
 import React, { useState, useEffect } from 'react';
+import { Container, Paper, Typography, Button, Box, CircularProgress, Select, MenuItem, InputLabel, FormControl, TextField, Collapse, Chip, Grid } from '@material-ui/core';
+import { Alert } from '@material-ui/lab';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import SymptomInput from './SymptomInput';
 import calculateDiagnosis from './SymptomCalculations';
 import './Checker.css';
 
 const DiagnosisCard = ({ diagnosis, probability, confidence, matchingFactors, index, isExpanded, onToggle, source, explanation }) => {
-  const confidenceColor = confidence === 'High' ? 'bg-green-100 text-green-800' : confidence === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
+  const confidenceColor = confidence === 'High' ? '#4caf50' : confidence === 'Medium' ? '#fbc02d' : '#f44336';
 
   return (
-    <div className="diagnosis-card bg-white shadow-md rounded-lg p-4 mb-4 transition-all duration-300" role="region" aria-labelledby={`diagnosis-${index}`}>
-      <div className="card-header flex justify-between items-center cursor-pointer" onClick={() => onToggle(index)} id={`diagnosis-${index}`}>
-        <h3 className="text-lg font-semibold text-gray-800">{diagnosis}</h3>
-        <div className="flex items-center space-x-2">
-          <span className={`confidence px-2 py-1 rounded-full text-sm font-medium ${confidenceColor}`}>{confidence}</span>
-          <span className="probability text-gray-600">{probability}% Likely</span>
-          <span className="toggle-icon text-gray-500 text-xl">{isExpanded ? '▲' : '▼'}</span>
-        </div>
-      </div>
-      {isExpanded && (
-        <div className="card-content mt-4 text-gray-700">
-          <div className="guidance-section mb-2">
-            <h4 className="section-title font-medium">Explanation</h4>
-            <p className="guidance-text">{explanation}</p>
-            <p className="source-text text-sm text-gray-500 mt-1">Source: {source}</p>
-          </div>
-          <div className="factors-section mb-2">
-            <h4 className="section-title font-medium">Matching Symptoms</h4>
-            <p className="factors-text">{matchingFactors.symptomMatch || 'None'}</p>
-          </div>
-          <div className="factors-section mb-2">
-            <h4 className="section-title font-medium">Matching Combinations</h4>
-            {matchingFactors.combinationMatches.length > 0 ? (
-              matchingFactors.combinationMatches.map((combo, idx) => (
-                <p key={idx} className="factors-text">
-                  {combo.combination} ({combo.isExactMatch ? 'Exact' : 'Partial'})
-                </p>
-              ))
-            ) : (
-              <p className="factors-text">None</p>
-            )}
-          </div>
-          <div className="factors-section">
-            <h4 className="section-title font-medium">Other Factors</h4>
-            <p className="factors-text">Risk Factors: {matchingFactors.riskFactorMatch || 'None'}</p>
-            <p className="factors-text">Travel: {matchingFactors.travelRiskMatch || 'None'}</p>
-            <p className="factors-text">Drug History: {matchingFactors.drugHistoryMatch || 'None'}</p>
-          </div>
-        </div>
-      )}
-    </div>
+    <Paper elevation={3} className="diagnosis-card" role="region" aria-labelledby={`diagnosis-${index}`}>
+      <Box className="card-header" onClick={() => onToggle(index)}>
+        <Typography variant="h6">{diagnosis}</Typography>
+        <Box className="card-header-right">
+          <Chip label={confidence} style={{ backgroundColor: confidenceColor, color: '#fff' }} />
+          <Typography variant="body2">{probability}% Likely</Typography>
+          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </Box>
+      </Box>
+      <Collapse in={isExpanded}>
+        <Box className="card-content">
+          <Typography variant="subtitle2">Explanation</Typography>
+          <Typography variant="body2">{explanation}</Typography>
+          <Typography variant="caption" color="textSecondary">Source: {source}</Typography>
+          <Typography variant="subtitle2">Matching Symptoms</Typography>
+          <Typography variant="body2">{matchingFactors.symptomMatch || 'None'}</Typography>
+          <Typography variant="subtitle2">Matching Combinations</Typography>
+          {matchingFactors.combinationMatches.length > 0 ? (
+            matchingFactors.combinationMatches.map((combo, idx) => (
+              <Typography key={idx} variant="body2">{combo.combination} ({combo.isExactMatch ? 'Exact' : 'Partial'})</Typography>
+            ))
+          ) : (
+            <Typography variant="body2">None</Typography>
+          )}
+          <Typography variant="subtitle2">Other Factors</Typography>
+          <Typography variant="body2">Risk Factors: {matchingFactors.riskFactorMatch || 'None'}</Typography>
+          <Typography variant="body2">Travel: {matchingFactors.travelRiskMatch || 'None'}</Typography>
+          <Typography variant="body2">Drug History: {matchingFactors.drugHistoryMatch || 'None'}</Typography>
+        </Box>
+      </Collapse>
+    </Paper>
   );
 };
 
@@ -141,119 +134,111 @@ const Checker = () => {
   };
 
   useEffect(() => {
-    if (isAnalyzing) {
-      document.body.style.cursor = 'wait';
-    } else {
-      document.body.style.cursor = 'default';
-    }
+    document.body.style.cursor = isAnalyzing ? 'wait' : 'default';
   }, [isAnalyzing]);
 
   return (
-    <div className="checker-container min-h-screen bg-gray-100 flex flex-col items-center p-4">
-      <header className="checker-header mb-8 text-center">
-        <h1 className="text-3xl font-bold text-gray-800">Symptom Checker</h1>
-        <p className="text-gray-600 mt-2">Enter your symptoms to get a potential diagnosis</p>
-      </header>
+    <Container maxWidth="md" className="checker-container">
+      <Box textAlign="center" my={4}>
+        <Typography variant="h4">Symptom Checker</Typography>
+        <Typography variant="body1" color="textSecondary">Enter your symptoms to get a potential diagnosis</Typography>
+      </Box>
 
-      <div className="checker-content w-full max-w-3xl">
-        <div className="input-section bg-white rounded-lg shadow-md p-6 mb-8">
-          <SymptomInput
-            onSelectSymptoms={handleSymptomSelect}
-            patientInfo={patientInfo}
-            onPatientInfoChange={handlePatientInfoChange}
-          />
+      <Paper elevation={3} className="input-section">
+        <SymptomInput
+          onSelectSymptoms={handleSymptomSelect}
+          patientInfo={patientInfo}
+          onPatientInfoChange={handlePatientInfoChange}
+        />
 
-          <div className="additional-inputs mt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Additional Factors</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Risk Factors</label>
-                <select
+        <Box className="additional-inputs">
+          <Typography variant="h6">Additional Factors</Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Risk Factors</InputLabel>
+                <Select
                   multiple
-                  className="risk-factors w-full p-2 border rounded-md"
                   value={selectedRiskFactors}
-                  onChange={(e) => setSelectedRiskFactors(Array.from(e.target.selectedOptions, option => option.value))}
+                  onChange={(e) => setSelectedRiskFactors(e.target.value)}
                 >
-                  <option value="smoking">Smoking</option>
-                  <option value="diabetes">Diabetes</option>
-                  <option value="hypertension">Hypertension</option>
-                  <option value="obesity">Obesity</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Travel Region</label>
-                <select
-                  className="travel-region w-full p-2 border rounded-md"
+                  <MenuItem value="smoking">Smoking</MenuItem>
+                  <MenuItem value="diabetes">Diabetes</MenuItem>
+                  <MenuItem value="hypertension">Hypertension</MenuItem>
+                  <MenuItem value="obesity">Obesity</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Travel Region</InputLabel>
+                <Select
                   value={travelRegion}
                   onChange={(e) => setTravelRegion(e.target.value)}
                 >
-                  <option value="">None</option>
-                  <option value="sub_saharan_africa">Sub-Saharan Africa</option>
-                  <option value="southeast_asia">Southeast Asia</option>
-                  <option value="south_america">South America</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Drug History</label>
-                <input
-                  type="text"
-                  className="drug-history w-full p-2 border rounded-md"
-                  value={drugHistory}
-                  onChange={(e) => setDrugHistory(e.target.value)}
-                  placeholder="e.g., Steroids, Antidepressants"
-                />
-              </div>
-            </div>
-          </div>
-
-          <button
+                  <MenuItem value="">None</MenuItem>
+                  <MenuItem value="sub_saharan_africa">Sub-Saharan Africa</MenuItem>
+                  <MenuItem value="southeast_asia">Southeast Asia</MenuItem>
+                  <MenuItem value="south_america">South America</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Drug History"
+                value={drugHistory}
+                onChange={(e) => setDrugHistory(e.target.value)}
+                placeholder="e.g., Steroids, Antidepressants"
+              />
+            </Grid>
+          </Grid>
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
             onClick={handleCheckDiagnosis}
             disabled={isAnalyzing}
-            className={`check-button w-full mt-6 py-3 px-4 rounded-md text-white font-semibold transition-colors ${isAnalyzing ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+            className="check-button"
           >
             {isAnalyzing ? 'Analyzing...' : 'Analyze Symptoms'}
-          </button>
-        </div>
+          </Button>
+        </Box>
+      </Paper>
 
-        {error && (
-          <div className="error-message bg-red-100 text-red-800 p-4 rounded-md mb-6" role="alert">
-            {error}
-          </div>
-        )}
+      {error && (
+        <Alert severity="error" className="error-message">{error}</Alert>
+      )}
 
-        {diagnosis.length > 0 && (
-          <div className="results-section bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Diagnosis Results</h2>
-            {isAnalyzing ? (
-              <div className="progress-container flex justify-center items-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
-                <div className="progress-bar w-full bg-gray-200 rounded-full h-2.5 mt-4">
-                  <div
-                    className="progress bg-blue-600 h-2.5 rounded-full"
-                    style={{ width: `${analysisProgress}%` }}
-                  ></div>
-                </div>
-              </div>
-            ) : (
-              diagnosis.map((diag, index) => (
-                <DiagnosisCard
-                  key={index}
-                  diagnosis={diag.diagnosis}
-                  probability={diag.probability}
-                  confidence={diag.confidence}
-                  matchingFactors={diag.matchingFactors}
-                  index={index}
-                  isExpanded={expandedCard === index}
-                  onToggle={toggleCard}
-                  source={diag.source}
-                  explanation={diag.explanation}
-                />
-              ))
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+      {diagnosis.length > 0 && (
+        <Paper elevation={3} className="results-section">
+          <Typography variant="h5">Diagnosis Results</Typography>
+          {isAnalyzing ? (
+            <Box className="progress-container">
+              <CircularProgress />
+              <Box className="progress-bar">
+                <Box className="progress" style={{ width: `${analysisProgress}%` }}></Box>
+              </Box>
+            </Box>
+          ) : (
+            diagnosis.map((diag, index) => (
+              <DiagnosisCard
+                key={index}
+                diagnosis={diag.diagnosis}
+                probability={diag.probability}
+                confidence={diag.confidence}
+                matchingFactors={diag.matchingFactors}
+                index={index}
+                isExpanded={expandedCard === index}
+                onToggle={toggleCard}
+                source={diag.source}
+                explanation={diag.explanation}
+              />
+            ))
+          )}
+        </Paper>
+      )}
+    </Container>
   );
 };
 
