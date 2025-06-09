@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
 import calculateDiagnosis from './SymptomCalculations';
+import { guidance } from './guidance';
 import {
   Box,
   Typography,
@@ -70,6 +71,13 @@ const ProgressContainer = styled(Box)(({ theme }) => ({
   margin: theme.spacing(2, 0),
 }));
 
+const GuidanceCard = styled(Card)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+  borderRadius: 12,
+  boxShadow: theme.shadows[2],
+  backgroundColor: theme.palette.background.default,
+}));
+
 const DiagnosisCard = ({
   diagnosis,
   probability,
@@ -79,6 +87,7 @@ const DiagnosisCard = ({
   onToggle,
   explanation,
 }) => {
+  const guidanceData = guidance[diagnosis.toLowerCase()];
   return (
     <StyledCard>
       <CardHeader
@@ -101,6 +110,19 @@ const DiagnosisCard = ({
           <Typography variant="body2" paragraph>
             {explanation}
           </Typography>
+          {guidanceData && (
+            <>
+              <Typography variant="h6" gutterBottom>
+                Guidance
+              </Typography>
+              <Typography variant="body2" paragraph>
+                <strong>Steps:</strong> {guidanceData.steps}
+              </Typography>
+              <Typography variant="body2" component="div">
+                <div dangerouslySetInnerHTML={{ __html: guidanceData.content.replace(/\n/g, '<br />') }} />
+              </Typography>
+            </>
+          )}
         </CardContent>
       </Collapse>
     </StyledCard>
