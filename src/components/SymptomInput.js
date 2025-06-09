@@ -1,50 +1,75 @@
 import React, { useState } from 'react';
-import { Plus, X, ChevronDown, ChevronUp, Link } from 'lucide-react';
-import { symptomList } from './SymptomList';
-import { symptomCombinations } from './SymptomCombinations';
-import './SymptomInput.css';
+import { Plus, X } from 'lucide-react';
+import { symptomList, symptomCombinations } from './SymptomList';
+import {
+  Box,
+  TextField,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+  Chip,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Paper,
+  InputAdornment,
+  Typography,
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import LinkIcon from '@mui/icons-material/Link';
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  minWidth: 200,
+  marginBottom: theme.spacing(2),
+  '& .MuiInputBase-root': {
+    borderRadius: 8,
+    backgroundColor: theme.palette.background.paper,
+  },
+}));
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  '& .MuiInputBase-root': {
+    borderRadius: 8,
+  },
+}));
+
+const SuggestionsContainer = styled(Paper)(({ theme }) => ({
+  position: 'absolute',
+  zIndex: 1000,
+  width: '100%',
+  maxHeight: 300,
+  overflowY: 'auto',
+  borderRadius: 8,
+  boxShadow: theme.shadows[3],
+}));
+
+const SelectedSymptomChip = styled(Chip)(({ theme }) => ({
+  margin: theme.spacing(0.5),
+  borderRadius: 16,
+  backgroundColor: theme.palette.primary.light,
+  color: theme.palette.primary.contrastText,
+}));
 
 const CustomSelect = ({ label, value, options, onSelect, placeholder }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
-    <div className="input-group">
-      <label>{label}</label>
-      <div
-        className="select-button"
-        onClick={() => setIsOpen(!isOpen)}
-        role="combobox"
-        aria-expanded={isOpen}
-        tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && setIsOpen(!isOpen)}
+    <StyledFormControl>
+      <InputLabel>{label}</InputLabel>
+      <Select
+        value={value || ''}
+        onChange={(e) => onSelect(e.target.value)}
+        label={label}
+        displayEmpty
+        renderValue={(selected) => (selected ? selected : <em>{placeholder}</em>)}
       >
-        <span className={value ? 'select-text' : 'placeholder-text'}>
-          {value || placeholder}
-        </span>
-        {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-      </div>
-      {isOpen && (
-        <div className="options-container">
-          {options.map((option) => (
-            <div
-              key={option}
-              className={`option-item ${value === option ? 'selected' : ''}`}
-              onClick={() => {
-                onSelect(option);
-                setIsOpen(false);
-              }}
-              role="option"
-              aria-selected={value === option}
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && (onSelect(option), setIsOpen(false))}
-            >
-              <span>{option}</span>
-              {value === option && <span className="check-icon">✓</span>}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+        {options.map((option) => (
+          <MenuItem key={option} value={option}>
+            {option}
+          </MenuItem>
+        ))}
+      </Select>
+    </StyledFormControl>
   );
 };
 
@@ -122,17 +147,15 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
   };
 
   return (
-    <div className="symptom-input-container">
-      <div className="input-group">
-        <label htmlFor="age-input">Age</label>
-        <input
-          id="age-input"
-          type="number"
-          value={patientInfo.age}
-          onChange={(e) => onPatientInfoChange('age', e.target.value)}
-          placeholder="Enter your age"
-        />
-      </div>
+    <Box sx={{ maxWidth: 600, margin: '0 auto', padding: 2 }}>
+      <StyledTextField
+        fullWidth
+        label="Age"
+        type="number"
+        value={patientInfo.age}
+        onChange={(e) => onPatientInfoChange('age', e.target.value)}
+        placeholder="Enter your age"
+      />
 
       <CustomSelect
         label="Gender"
@@ -142,77 +165,74 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
         placeholder="Select your gender"
       />
 
-      <div className="input-group">
-        <label htmlFor="symptom-input">Symptoms</label>
-        <input
-          id="symptom-input"
-          type="text"
+      <Box sx={{ position: 'relative', marginBottom: 2 }}>
+        <StyledTextField
+          fullWidth
+          label="Symptoms"
           placeholder="Type to search symptoms..."
           value={input}
           onChange={handleInputChange}
-          aria-autocomplete="list"
-          aria-controls="suggestions-container"
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Plus size={16} />
+              </InputAdornment>
+            ),
+          }}
         />
         {suggestions.length > 0 && (
-          <div className="suggestions-container" id="suggestions-container">
+          <SuggestionsContainer>
             {suggestions.map((suggestion, index) => (
-              <div
+              <ListItem
                 key={index}
-                className={`suggestion ${suggestion.type === 'combination' ? 'combination-suggestion' : ''}`}
+                button
                 onClick={() => handleSymptomSelect(suggestion)}
-                role="option"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && handleSymptomSelect(suggestion)}
+                sx={{
+                  '&:hover': { backgroundColor: 'action.hover' },
+                  padding: 1,
+                }}
               >
-                <span className={`suggestion-text ${suggestion.type === 'combination' ? 'combination-text' : ''}`}>
-                  {suggestion.type === 'combination' && <Link size={14} style={{ marginRight: '4px' }} />}
-                  {suggestion.text}
-                </span>
-                <Plus size={16} className="add-icon" />
-              </div>
+                {suggestion.type === 'combination' && (
+                  <ListItemIcon>
+                    <LinkIcon fontSize="small" />
+                  </ListItemIcon>
+                )}
+                <ListItemText primary={suggestion.text} />
+              </ListItem>
             ))}
-          </div>
+          </SuggestionsContainer>
         )}
         {selectedSymptoms.length > 0 && (
-          <div className="selected-container">
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
             {selectedSymptoms.map((symptom) => (
-              <div key={symptom} className="selected-symptom">
-                <span>{symptom}</span>
-                <span
-                  className="delete-icon"
-                  onClick={() => removeSymptom(symptom)}
-                  role="button"
-                  aria-label={`Remove ${symptom}`}
-                >
-                  <X size={16} />
-                </span>
-              </div>
+              <SelectedSymptomChip
+                key={symptom}
+                label={symptom}
+                onDelete={() => removeSymptom(symptom)}
+                deleteIcon={<X size={16} />}
+              />
             ))}
-          </div>
+          </Box>
         )}
-      </div>
+      </Box>
 
-      <div className="row-container">
-        <div className="input-group duration-input">
-          <label htmlFor="duration-input">Duration</label>
-          <input
-            id="duration-input"
-            type="number"
-            value={patientInfo.duration}
-            onChange={(e) => onPatientInfoChange('duration', e.target.value)}
-            placeholder="Enter number"
-          />
-        </div>
-        <div className="input-group duration-unit">
-          <CustomSelect
-            label="Duration Unit"
-            value={patientInfo.durationUnit}
-            options={['Days', 'Weeks', 'Months']}
-            onSelect={(value) => onPatientInfoChange('durationUnit', value)}
-            placeholder="Unit"
-          />
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', gap: 2, marginBottom: 2 }}>
+        <StyledTextField
+          fullWidth
+          label="Duration"
+          type="number"
+          value={patientInfo.duration}
+          onChange={(e) => onPatientInfoChange('duration', e.target.value)}
+          placeholder="Enter number"
+        />
+        <CustomSelect
+          label="Duration Unit"
+          value={patientInfo.durationUnit}
+          options={['Days', 'Weeks', 'Months']}
+          onSelect={(value) => onPatientInfoChange('durationUnit', value)}
+          placeholder="Unit"
+        />
+      </Box>
 
       <CustomSelect
         label="Severity"
@@ -221,7 +241,7 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
         onSelect={(value) => onPatientInfoChange('severity', value)}
         placeholder="Select severity level"
       />
-    </div>
+    </Box>
   );
 };
 
