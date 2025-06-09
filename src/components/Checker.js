@@ -127,10 +127,6 @@ const Checker = () => {
     }
   };
 
-  const toggleCard = (index) => {
-    setExpandedCard(expandedCard === index ? null : index);
-  };
-
   useEffect(() => {
     document.body.style.cursor = isAnalyzing ? 'wait' : 'default';
   }, [isAnalyzing]);
@@ -149,11 +145,11 @@ const Checker = () => {
           onPatientInfoChange={handlePatientInfoChange}
         />
 
-        <div class="additional-inputs">
+        <div className="additional-inputs">
           <h2>Additional Factors</h2>
-          <div class="grid-container">
-            <div class="form-group">
-              <label for="risk-select">Risk Factors</label>
+          <div className="grid-container">
+            <div className="form-group">
+              <label htmlFor="risk-select">Risk Factors</label>
               <select
                 id="risk-select"
                 multiple
@@ -170,8 +166,8 @@ const Checker = () => {
                 <option value="obesity">Obesity</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="travel-select">Travel Region</label>
+            <div className="form-group">
+              <label htmlFor="travel-select">Travel Region</label>
               <select
                 id="travel-select"
                 value={travelRegion}
@@ -183,8 +179,8 @@ const Checker = () => {
                 <option value="south_america">South America</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="drug-history">Drug History</label>
+            <div className="form-group">
+              <label htmlFor="drug-history">Drug History</label>
               <input
                 type="text"
                 id="drug-history"
@@ -195,27 +191,25 @@ const Checker = () => {
             </div>
           </div>
           <button
-            class="check-button"
-              onClick={handleCheckDiagnosis}
-              disabled={isAnalyzing}}
+            className="check-button"
+            onClick={handleCheckDiagnosis}
+            disabled={isAnalyzing}
           >
             {isAnalyzing ? 'Analyzing...' : 'Analyze Symptoms'}
           </button>
         </div>
       </div>
 
-      {error && (
-        <div class="error-message">{error}</div>
-      )}
+      {error && <div className="error-message">{error}</div>}
 
       {diagnosis.length > 0 && (
-        <div class="results-section">
+        <div className="results-section">
           <h2>Diagnosis Results</h2>
           {isAnalyzing ? (
-            <div class="progress-container">
-              <div class="progress-spinner"></div>
-              <div class="progress-bar">
-                <div class="progress" style={{ width: `${analysisProgress}%` }}></div>
+            <div className="progress-container">
+              <div className="progress-spinner"></div>
+              <div className="progress-bar">
+                <div className="progress" style={{ width: `${analysisProgress}%` }}></div>
               </div>
             </div>
           ) : (
@@ -230,9 +224,9 @@ const Checker = () => {
                 isExpanded={expandedCard === index}
                 onToggle={toggleCard}
                 source={diag.source}
-                explanation={diagnosis.explanation}}
+                explanation={diag.explanation}
               />
-            ))}
+            ))
           )}
         </div>
       )}
