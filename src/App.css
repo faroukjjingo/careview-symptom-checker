@@ -3,22 +3,21 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  background-color: #ffffff; /* Light mode background */
-  color: #000000; /* Light mode text */
+  background-color: #f4f7fa;
+  color: #1a202c;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 @media (prefers-color-scheme: dark) {
   .app-container {
-    background-color: #000000; /* Dark mode background */
-    color: #ffffff; /* Dark mode text */
+    background-color: #1a202c;
+    color: #e2e8f0;
   }
 }
 
-/* Override for system light mode */
 @media (prefers-color-scheme: light) {
   .app-container {
-    background-color: #ffffff;
-    color: #000000;
+    background-color: #f4f7fa;
+    color: #1a202c;
   }
 }
