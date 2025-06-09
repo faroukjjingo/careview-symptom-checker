@@ -1,12 +1,13 @@
 import React from 'react';
+import { Container } from '@material-ui/core';
 import Checker from './components/Checker';
 import './App.css';
 
 function App() {
   return (
-    <div className="app-container">
+    <Container className="app-container">
       <Checker />
-    </div>
+    </Container>
   );
 }
 
