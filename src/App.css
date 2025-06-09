@@ -1,23 +1,6 @@
 .app-container {
+  background-color: #000000;
+  color: #ffffff;
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  background-color: #f4f7fa;
-  color: #1a202c;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-@media (prefers-color-scheme: dark) {
-  .app-container {
-    background-color: #1a202c;
-    color: #e2e8f0;
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  .app-container {
-    background-color: #f4f7fa;
-    color: #1a202c;
-  }
+  padding: 20px;
 }
