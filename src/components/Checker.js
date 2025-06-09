@@ -213,7 +213,7 @@ const Checker = () => {
 
       simulateAnalysis(result);
     } catch (err) {
-        setError('Error analyzing symptoms. Please try again.');
+      setError('Error analyzing symptoms. Please try again.');
       setDiagnosis([]);
       alert('Error analyzing symptoms.');
       setIsAnalyzing(false);
@@ -284,7 +284,7 @@ const Checker = () => {
             fullWidth
             label="Drug History"
             value={drugHistory}
-            onChange={(e) => setDrugHistory(e.target.value}
+            onChange={(e) => setDrugHistory(e.target.value)}
             placeholder="e.g., Steroids, Antidepressants"
             sx={{ marginBottom: 2 }}
           />
