@@ -1,7 +1,7 @@
 // Checker.jsx
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
-import calculateDiagnosis from './SymptomCalculations';
+import calculateDiagnosis from './calculateDiagnosis';
 import { guidance } from './guidance';
 import {
   Box,
@@ -17,9 +17,6 @@ import {
   CardHeader,
   Chip,
   Collapse,
-  List,
-  ListItem,
-  ListItemText,
   LinearProgress,
   CircularProgress,
   styled,
@@ -46,6 +43,10 @@ const StyledButton = styled(Button)(({ theme }) => ({
   padding: theme.spacing(1.5),
   textTransform: 'none',
   fontWeight: 600,
+  backgroundColor: theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: theme.palette.primary.dark,
+  },
 }));
 
 const ConfidenceChip = styled(Chip)(({ theme, confidence }) => ({
@@ -69,13 +70,6 @@ const ProgressContainer = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(2),
   margin: theme.spacing(2, 0),
-}));
-
-const GuidanceCard = styled(Card)(({ theme }) => ({
-  marginTop: theme.spacing(2),
-  borderRadius: 12,
-  boxShadow: theme.shadows[2],
-  backgroundColor: theme.palette.background.default,
 }));
 
 const DiagnosisCard = ({
@@ -110,18 +104,22 @@ const DiagnosisCard = ({
           <Typography variant="body2" paragraph>
             {explanation}
           </Typography>
-          {guidanceData && (
+          {guidanceData ? (
             <>
               <Typography variant="h6" gutterBottom>
                 Guidance
               </Typography>
               <Typography variant="body2" paragraph>
-                <strong>Steps:</strong> {guidanceData.steps}
+                <strong>Next Steps:</strong> {guidanceData.steps}
               </Typography>
               <Typography variant="body2" component="div">
                 <div dangerouslySetInnerHTML={{ __html: guidanceData.content.replace(/\n/g, '<br />') }} />
               </Typography>
             </>
+          ) : (
+            <Typography variant="body2" color="text.secondary" paragraph>
+              No specific guidance available for {diagnosis}. Consult a healthcare provider for further evaluation.
+            </Typography>
           )}
         </CardContent>
       </Collapse>
@@ -136,7 +134,7 @@ const Checker = () => {
     gender: '',
     duration: '',
     durationUnit: 'Days',
-    severity: '',
+    severity: 'Moderate',
   });
   const [selectedRiskFactors, setSelectedRiskFactors] = useState([]);
   const [travelRegion, setTravelRegion] = useState('');
@@ -188,7 +186,7 @@ const Checker = () => {
         parseInt(patientInfo.duration) || 1,
         patientInfo.durationUnit,
         patientInfo.severity,
-        patientInfo.age,
+        patientInfo.age || 30,
         patientInfo.gender,
         drugHistory,
         travelRegion,
@@ -220,13 +218,13 @@ const Checker = () => {
   }, [isAnalyzing]);
 
   return (
-    <Box sx={{ maxWidth: 800, margin: '0 auto', padding: 0 }}>
+    <Box sx={{ maxWidth: 900, margin: '0 auto', padding: 3 }}>
       <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h3" gutterBottom>
           CareView
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Enter your symptoms to get a potential diagnosis
+          Input your symptoms to explore potential diagnoses
         </Typography>
       </Box>
 
@@ -237,10 +235,10 @@ const Checker = () => {
       />
 
       <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Additional Factors
+        <Typography variant="h5" gutterBottom>
+          Additional Information
         </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2, mb: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
           <StyledFormControl>
             <InputLabel id="risk-select-label">Risk Factors</InputLabel>
             <Select
@@ -292,14 +290,14 @@ const Checker = () => {
       </Box>
 
       {errorMessage && (
-        <Typography color="error" sx={{ mt: 2, textAlign: 'center' }}>
+        <Typography color="error" sx={{ mt: 2, textAlign: 'center', fontWeight: 500 }}>
           {errorMessage}
         </Typography>
       )}
 
       {diagnosis.length > 0 && (
         <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h5" gutterBottom>
             Diagnosis Results
           </Typography>
           {isAnalyzing ? (
