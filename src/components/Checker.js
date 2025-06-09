@@ -1,6 +1,7 @@
+// Checker.jsx
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
-import calculateDiagnosis from './SymptomCalculations';
+import calculateDiagnosis from './calculateDiagnosis';
 import {
   Box,
   Typography,
@@ -48,15 +49,15 @@ const StyledButton = styled(Button)(({ theme }) => ({
 
 const ConfidenceChip = styled(Chip)(({ theme, confidence }) => ({
   backgroundColor:
-    confidence === 'high'
+    confidence === 'High'
       ? theme.palette.success.light
-      : confidence === 'medium'
+      : confidence === 'Medium'
       ? theme.palette.warning.light
       : theme.palette.error.light,
   color: theme.palette.getContrastText(
-    confidence === 'high'
+    confidence === 'High'
       ? theme.palette.success.light
-      : confidence === 'medium'
+      : confidence === 'Medium'
       ? theme.palette.warning.light
       : theme.palette.error.light
   ),
@@ -73,11 +74,9 @@ const DiagnosisCard = ({
   diagnosis,
   probability,
   confidence,
-  matchingFactors,
   index,
   isExpanded,
   onToggle,
-  source,
   explanation,
 }) => {
   return (
@@ -86,7 +85,7 @@ const DiagnosisCard = ({
         title={diagnosis}
         action={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <ConfidenceChip label={confidence} confidence={confidence.toLowerCase()} />
+            <ConfidenceChip label={confidence} confidence={confidence} />
             <Typography variant="body2">{probability}% Likely</Typography>
             {isExpanded ? <ExpandLess /> : <ExpandMore />}
           </Box>
@@ -102,35 +101,6 @@ const DiagnosisCard = ({
           <Typography variant="body2" paragraph>
             {explanation}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Source: {source}
-          </Typography>
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-            Matching Symptoms
-          </Typography>
-          <Typography variant="body2">{matchingFactors.symptomMatch || 'None'}</Typography>
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-            Matching Combinations
-          </Typography>
-          {matchingFactors.combinationMatches.length > 0 ? (
-            <List dense>
-              {matchingFactors.combinationMatches.map((combo, idx) => (
-                <ListItem key={idx}>
-                  <ListItemText primary={`${combo.combination} (${combo.isExactMatch ? 'Exact' : 'Partial'})`} />
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              None
-            </Typography>
-          )}
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-            Other factors
-          </Typography>
-          <Typography variant="body2">Risk Factors: {matchingFactors.riskFactorMatch || 'None'}</Typography>
-          <Typography variant="body2">Travel: {matchingFactors.travelRiskMatch || 'None'}</Typography>
-          <Typography variant="body2">Drug History: {matchingFactors.drugHistoryMatch || 'None'}</Typography>
         </CardContent>
       </Collapse>
     </StyledCard>
@@ -194,10 +164,10 @@ const Checker = () => {
       const result = await calculateDiagnosis(
         selectedSymptoms,
         parseInt(patientInfo.duration) || 1,
-        patientInfo.durationUnit.toLowerCase(),
-        patientInfo.severity.toLowerCase(),
+        patientInfo.durationUnit,
+        patientInfo.severity,
         patientInfo.age,
-        patientInfo.gender.toLowerCase(),
+        patientInfo.gender,
         drugHistory,
         travelRegion,
         selectedRiskFactors
@@ -324,11 +294,9 @@ const Checker = () => {
                 diagnosis={diag.diagnosis}
                 probability={diag.probability}
                 confidence={diag.confidence}
-                matchingFactors={diag.matchingFactors}
                 index={index}
                 isExpanded={expandedCard === index}
                 onToggle={() => setExpandedCard(expandedCard === index ? null : index)}
-                source={diag.source}
                 explanation={diag.explanation}
               />
             ))
