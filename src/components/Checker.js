@@ -220,7 +220,7 @@ const Checker = () => {
   }, [isAnalyzing]);
 
   return (
-    <Box sx={{ maxWidth: 800, margin: '0 auto', padding: 2 }}>
+    <Box sx={{ maxWidth: 800, margin: '0 auto', padding: 0 }}>
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h4" gutterBottom>
           CareView
