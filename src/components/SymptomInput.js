@@ -1,32 +1,26 @@
 import React, { useState } from 'react';
+import { TextField, FormControl, InputLabel, Select, MenuItem, Chip, Box, Typography, Paper } from '@material-ui/core';
+import { Plus, X, ChevronDown, ChevronUp, Link } from 'lucide-react';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
 import './SymptomInput.css';
 
-const Select = ({ label, value, options, onSelect, placeholder }) => {
+const CustomSelect = ({ label, value, options, onSelect, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="input-group">
-      {label && <label className="label">{label}</label>}
-      <div
-        className="select-button"
-        onClick={() => setIsOpen(!isOpen)}
-        role="combobox"
-        aria-expanded={isOpen}
-      >
-        <span className={value ? 'select-text' : 'placeholder-text'}>
-          {value || placeholder}
-        </span>
-        <span className="arrow-icon">{isOpen ? '▲' : '▼'}</span>
-      </div>
-
+    <FormControl fullWidth className="input-group">
+      <InputLabel>{label}</InputLabel>
+      <Box className="select-button" onClick={() => setIsOpen(!isOpen)} role="combobox" aria-expanded={isOpen}>
+        <Typography className={value ? 'select-text' : 'placeholder-text'}>{value || placeholder}</Typography>
+        {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </Box>
       {isOpen && (
-        <div className="options-container">
+        <Paper className="options-container">
           {options.map((option) => (
-            <div
+            <MenuItem
               key={option}
-              className={`option ${value === option ? 'selected-option' : ''}`}
+              className={value === option ? 'selected-option' : ''}
               onClick={() => {
                 onSelect(option);
                 setIsOpen(false);
@@ -34,15 +28,13 @@ const Select = ({ label, value, options, onSelect, placeholder }) => {
               role="option"
               aria-selected={value === option}
             >
-              <span className={`option-text ${value === option ? 'selected-option-text' : ''}`}>
-                {option}
-              </span>
+              <Typography className={value === option ? 'selected-option-text' : ''}>{option}</Typography>
               {value === option && <span className="check-icon">✓</span>}
-            </div>
+            </MenuItem>
           ))}
-        </div>
+        </Paper>
       )}
-    </div>
+    </FormControl>
   );
 };
 
@@ -60,12 +52,10 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
       return;
     }
 
-    // Handle both array and object-based symptomList
     const availableSymptoms = Array.isArray(symptomList)
       ? symptomList
       : Object.keys(symptomList);
 
-    // Filter symptoms
     const filteredSymptoms = availableSymptoms
       .filter(
         (symptom) =>
@@ -74,7 +64,6 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
       )
       .slice(0, 8);
 
-    // Filter combinations
     const combinationKeys = Object.keys(symptomCombinations);
     const filteredCombinations = combinationKeys
       .filter((combination) => {
@@ -103,16 +92,8 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
   };
 
   const handleSymptomSelect = (suggestion) => {
-    let symptomsToAdd = [];
-    if (suggestion.type === 'combination') {
-      symptomsToAdd = suggestion.symptoms;
-    } else {
-      symptomsToAdd = [suggestion.text];
-    }
-
-    const uniqueNewSymptoms = symptomsToAdd.filter(
-      (symptom) => !selectedSymptoms.includes(symptom)
-    );
+    let symptomsToAdd = suggestion.type === 'combination' ? suggestion.symptoms : [suggestion.text];
+    const uniqueNewSymptoms = symptomsToAdd.filter((symptom) => !selectedSymptoms.includes(symptom));
 
     if (uniqueNewSymptoms.length > 0) {
       const updatedSymptoms = [...selectedSymptoms, ...uniqueNewSymptoms];
@@ -131,19 +112,18 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
   };
 
   return (
-    <div className="symptom-input-container">
-      <div className="input-group">
-        <label className="label">Age</label>
-        <input
-          className="input"
-          placeholder="Enter your age"
-          type="number"
-          value={patientInfo.age}
-          onChange={(e) => onPatientInfoChange('age', e.target.value)}
-        />
-      </div>
+    <Box className="symptom-input-container">
+      <TextField
+        fullWidth
+        label="Age"
+        type="number"
+        value={patientInfo.age}
+        onChange={(e) => onPatientInfoChange('age', e.target.value)}
+        placeholder="Enter your age"
+        className="input-group"
+      />
 
-      <Select
+      <CustomSelect
         label="Gender"
         value={patientInfo.gender}
         options={['Male', 'Female', 'Other']}
@@ -151,94 +131,78 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
         placeholder="Select your gender"
       />
 
-      <div className="input-group">
-        <label className="label">Symptoms</label>
-        <input
-          className="input"
+      <Box className="input-group">
+        <TextField
+          fullWidth
+          label="Symptoms"
           placeholder="Type to search symptoms..."
           value={input}
           onChange={handleInputChange}
           aria-autocomplete="list"
           aria-controls="suggestions-container"
         />
-
         {suggestions.length > 0 && (
-          <div className="suggestions-container" id="suggestions-container">
+          <Paper className="suggestions-container" id="suggestions-container">
             {suggestions.map((suggestion, index) => (
-              <div
+              <Box
                 key={index}
-                className={`suggestion ${
-                  suggestion.type === 'combination' ? 'combination-suggestion' : ''
-                }`}
+                className={`suggestion ${suggestion.type === 'combination' ? 'combination-suggestion' : ''}`}
                 onClick={() => handleSymptomSelect(suggestion)}
                 role="option"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && handleSymptomSelect(suggestion)}
               >
-                <span
-                  className={`suggestion-text ${
-                    suggestion.type === 'combination' ? 'combination-text' : ''
-                  }`}
-                >
-                  {suggestion.type === 'combination' ? '🔗 ' : ''}
+                <Typography className={`suggestion-text ${suggestion.type === 'combination' ? 'combination-text' : ''}`}>
+                  {suggestion.type === 'combination' && <Link size={14} style={{ marginRight: 4 }} />}
                   {suggestion.text}
-                </span>
-                <span className="add-icon">+</span>
-              </div>
+                </Typography>
+                <Plus size={16} className="add-icon" />
+              </Box>
             ))}
-          </div>
+          </Paper>
         )}
-
         {selectedSymptoms.length > 0 && (
-          <div className="selected-container">
+          <Box className="selected-container">
             {selectedSymptoms.map((symptom) => (
-              <div key={symptom} className="selected-symptom">
-                <span className="selected-symptom-text">{symptom}</span>
-                <span
-                  className="remove-icon"
-                  onClick={() => removeSymptom(symptom)}
-                  role="button"
-                  aria-label={`Remove ${symptom}`}
-                >
-                  ✕
-                </span>
-              </div>
+              <Chip
+                key={symptom}
+                label={symptom}
+                onDelete={() => removeSymptom(symptom)}
+                className="selected-symptom"
+                deleteIcon={<X size={16} />}
+              />
             ))}
-          </div>
+          </Box>
         )}
-      </div>
+      </Box>
 
-      <div className="row-container">
-        <div className="input-group duration-input">
-          <label className="label">Duration</label>
-          <input
-            className="input"
-            placeholder="Enter number"
-            type="number"
-            value={patientInfo.duration}
-            onChange={(e) => onPatientInfoChange('duration', e.target.value)}
-          />
-        </div>
+      <Box className="row-container">
+        <TextField
+          label="Duration"
+          type="number"
+          value={patientInfo.duration}
+          onChange={(e) => onPatientInfoChange('duration', e.target.value)}
+          placeholder="Enter number"
+          className="duration-input"
+        />
+        <CustomSelect
+          label="Duration Unit"
+          value={patientInfo.durationUnit}
+          options={['Days', 'Weeks', 'Months']}
+          onSelect={(value) => onPatientInfoChange('durationUnit', value)}
+          placeholder="Unit"
+          className="duration-unit"
+        />
+      </Box>
 
-        <div className="input-group duration-unit">
-          <label className="label">Duration Unit</label>
-          <Select
-            value={patientInfo.durationUnit}
-            options={['Days', 'Weeks', 'Months']}
-            onSelect={(value) => onPatientInfoChange('durationUnit', value)}
-            placeholder="Unit"
-          />
-        </div>
-      </div>
-
-      <Select
+      <CustomSelect
         label="Severity"
         value={patientInfo.severity}
         options={['Mild', 'Moderate', 'Severe']}
         onSelect={(value) => onPatientInfoChange('severity', value)}
         placeholder="Select severity level"
       />
-    </div>
+    </Box>
   );
 };
 
