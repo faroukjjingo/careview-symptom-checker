@@ -1,22 +1,203 @@
+/* Checker.css */
+
+/* Root container */
 .checker-container {
-  background-color: #000000;
-  color: #ffffff;
+  width: 100%;
+  max-width: 100%;
   padding: 0;
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
 }
 
+/* Header section */
+.checker-container > div:first-child {
+  text-align: center;
+  margin: 8px 0;
+}
+
+.MuiTypography-h4,
+.MuiTypography-body1 {
+  color: #fff;
+}
+
+/* Input section (Paper) */
 .input-section {
-  background-color: #1a1a1a;
-  padding: 20px;
-  margin-bottom: 20px;
-  border: 1px solid #ffffff;
+  width: 100%;
+  background: #000;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 8px 0;
+  box-shadow: none;
 }
 
+/* Additional inputs section */
+.additional-inputs {
+  margin-top: 8px;
+}
+
+.MuiTypography-h6 {
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+/* Grid for additional inputs */
+.MuiGrid-container {
+  width: 100%;
+  margin: 0;
+}
+
+.MuiGrid-item {
+  padding: 4px;
+}
+
+/* FormControl and Select */
+.MuiFormControl-root {
+  width: 100%;
+}
+
+.MuiInputBase-root {
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+  border-radius: 4px;
+}
+
+.MuiInputBase-input {
+  padding: 12px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.MuiInputLabel-root {
+  color: #fff;
+  font-size: 14px;
+  transform: translate(12px, 12px) scale(1);
+}
+
+.MuiInputLabel-shrink {
+  transform: translate(12px, -6px) scale(0.75);
+  color: #fff;
+}
+
+.MuiInputBase-root.Mui-focused .MuiInputLabel-root {
+  color: #fff;
+}
+
+.MuiInputBase-root::before,
+.MuiInputBase-root::after {
+  border-bottom: none !important;
+}
+
+.MuiSelect-icon {
+  color: #fff;
+}
+
+.MuiMenuItem-root {
+  background: #000;
+  color: #fff;
+  padding: 12px;
+}
+
+.MuiMenuItem-root:hover {
+  background: #333;
+}
+
+/* TextField for Drug History */
+.MuiTextField-root {
+  width: 100%;
+}
+
+/* Analyze Symptoms button */
+.check-button {
+  background: #fff !important;
+  color: #000 !important;
+  padding: 12px;
+  border-radius: 4px;
+  margin-top: 8px;
+  text-transform: none;
+  font-size: 16px;
+  transition: opacity 0.2s;
+}
+
+.check-button:hover {
+  opacity: 0.9;
+}
+
+.check-button.Mui-disabled {
+  background: #333 !important;
+  color: #666 !important;
+}
+
+/* Error message */
+.error-message {
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  margin: 8px 0;
+  padding: 8px;
+}
+
+.error-message .MuiAlert-icon {
+  color: #fff;
+}
+
+/* Results section */
+.results-section {
+  width: 100%;
+  background: #000;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 8px 0;
+  box-shadow: none;
+}
+
+.MuiTypography-h5 {
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+/* Progress container */
+.progress-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+}
+
+.MuiCircularProgress-root {
+  color: #fff;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background: #fff;
+  transition: width 0.2s ease;
+}
+
+/* Diagnosis card */
 .diagnosis-card {
-  background-color: #000000;
-  color: #ffffff;
-  margin: 10px 0;
-  padding: 15px;
-  border: 1px solid #ffffff;
+  width: 100%;
+  background: #000;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  margin: 8px 0;
+  padding: 8px;
+  box-shadow: none;
 }
 
 .card-header {
@@ -24,91 +205,72 @@
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
+  padding: 8px;
 }
 
 .card-header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
+.MuiTypography-h6,
+.MuiTypography-body2,
+.MuiTypography-subtitle2,
+.MuiTypography-caption {
+  color: #fff;
+}
+
+/* Confidence Chip */
+.MuiChip-root {
+  background: #333 !important;
+  color: #fff !important;
+  height: 24px;
+  border-radius: 12px;
+}
+
+.MuiChip-label {
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+/* Card content */
 .card-content {
-  padding: 10px 0;
+  padding: 8px;
 }
 
-.results-section {
-  background-color: #000000;
-  color: #ffffff;
-  padding: 20px;
-  border: 1px solid #ffffff;
+.card-content .MuiTypography-body2 {
+  margin-bottom: 4px;
 }
 
-.check-button {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  margin-top: 20px;
+/* Chevron icons */
+.card-header svg {
+  color: #fff;
 }
 
-.check-button:disabled {
-  background-color: #666666 !important;
-  color: #000000 !important;
+/* Scrollbar for Select dropdowns */
+.MuiMenu-paper::-webkit-scrollbar {
+  width: 8px;
 }
 
-.error-message {
-  background-color: #000000;
-  color: #ffffff;
-  border: 1px solid #ffffff;
-  margin: 10px 0;
+.MuiMenu-paper::-webkit-scrollbar-track {
+  background: #000;
 }
 
-.progress-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 20px;
+.MuiMenu-paper::-webkit-scrollbar-thumb {
+  background: #fff;
+  border-radius: 4px;
 }
 
-.progress-bar {
-  width: 100%;
-  height: 10px;
-  background-color: #1a1a1a;
-  border: 1px solid #ffffff;
+.MuiMenu-paper::-webkit-scrollbar-thumb:hover {
+  background: #ccc;
 }
 
-.progress {
-  height: 100%;
-  background-color: #ffffff;
-  transition: width 0.2s ease-in-out;
-}
-
-.additional-inputs {
-  margin-top: 20px;
-}
-
-.MuiInputLabel-root {
-  color: #ffffff !important;
-}
-
-.MuiInputBase-root {
-  color: #ffffff !important;
-  background-color: #1a1a1a !important;
-  border: 1px solid #ffffff !important;
-}
-
-.MuiSelect-icon {
-  color: #ffffff !important;
-}
-
-.MuiMenuItem-root {
-  background-color: #000000 !important;
-  color: #ffffff !important;
-}
-
-.MuiMenuItem-root:hover {
-  background-color: #333333 !important;
-}
-
-.MuiFormControl-root {
-  margin-bottom: 10px !important;
+/* Focus states for accessibility */
+.MuiInputBase-root.Mui-focused,
+.check-button:focus,
+.diagnosis-card:focus,
+.MuiMenuItem-root:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
