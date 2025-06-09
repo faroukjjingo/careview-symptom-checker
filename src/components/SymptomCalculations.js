@@ -93,7 +93,7 @@ const calculateDiagnosis = async (
           diseaseScores[disease] = diseaseScores[disease] || 0;
           const baseScore = data.weight || 1;
           const modifiers = calculateModifiers(data, factors);
-          diseaseScores[disease] += baseScore * modifiers * 8;
+          diseaseScores[disease] += baseScore * modifiers * 10;
         }
       } else {
         unmatchedSymptoms.push(symptom);
@@ -105,7 +105,7 @@ const calculateDiagnosis = async (
     for (const comboKey of Object.keys(symptomCombinations)) {
       const comboSymptoms = comboKey.split(', ').map((s) => s.trim());
       const intersection = comboSymptoms.filter((s) => symptomSet.has(s));
-      if (intersection.length >= 1) {
+      if (intersection.length >= 2) {
         const matchRatio = intersection.length / comboSymptoms.length;
         const diseases = symptomCombinations[comboKey];
         for (const [disease, weight] of Object.entries(diseases)) {
@@ -168,11 +168,11 @@ const calculateDiagnosis = async (
       .sort((a, b) => b.probability - a.probability);
 
     // Fallback for single or unmatched symptoms
-    if (detailed.length === 0) {
+    if (detailed.length === 0 || Object.keys(diseaseScores).length === 0) {
       detailed = symptoms.flatMap((symptom) => {
         if (symptomWeights[symptom]) {
           return Object.entries(symptomWeights[symptom]).map(([disease, data]) => {
-            const score = (data.weight || 1) * 8;
+            const score = (data.weight || 1) * calculateModifiers(data, factors) * 10;
             const probability = normalizeScore(score, maxPossibleScore) / 100;
             return {
               diagnosis: disease,
@@ -182,15 +182,20 @@ const calculateDiagnosis = async (
             };
           });
         }
-        return [{
-          diagnosis: 'Possible condition',
-          probability: 15,
-          confidence: 'Low',
-          explanation: `Unrecognized symptom: ${symptom}. Consult a healthcare provider.`,
-        }];
+        return [];
       });
       detailed = [...new Map(detailed.map((d) => [d.diagnosis, d])).values()]
         .sort((a, b) => b.probability - a.probability);
+    }
+
+    // Ensure at least one result
+    if (detailed.length === 0) {
+      detailed = symptoms.map((symptom) => ({
+        diagnosis: 'Possible condition',
+        probability: 10,
+        confidence: 'Low',
+        explanation: `Unrecognized symptom: ${symptom}. Consult a healthcare provider.`,
+      }));
     }
 
     return {
