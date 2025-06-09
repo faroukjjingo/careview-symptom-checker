@@ -222,7 +222,7 @@ const Checker = () => {
                 matchingFactors={diag.matchingFactors}
                 index={index}
                 isExpanded={expandedCard === index}
-                onToggle={toggleCard}
+                onToggle={() => setExpandedCard(expandedCard === index ? null : index)}
                 source={diag.source}
                 explanation={diag.explanation}
               />
