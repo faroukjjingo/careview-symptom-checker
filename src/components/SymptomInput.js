@@ -3,7 +3,7 @@ import { TextField, FormControl, InputLabel, Select, MenuItem, Chip, Box, Typogr
 import { Plus, X, ChevronDown, ChevronUp, Link } from 'lucide-react';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
-import './SymptomInput.css';
+
 
 const CustomSelect = ({ label, value, options, onSelect, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
