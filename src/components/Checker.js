@@ -4,7 +4,7 @@ import { Alert } from '@material-ui/lab';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import SymptomInput from './SymptomInput';
 import calculateDiagnosis from './SymptomCalculations';
-import './Checker.css';
+
 
 const DiagnosisCard = ({ diagnosis, probability, confidence, matchingFactors, index, isExpanded, onToggle, source, explanation }) => {
   const confidenceColor = confidence === 'High' ? '#4caf50' : confidence === 'Medium' ? '#fbc02d' : '#f44336';
