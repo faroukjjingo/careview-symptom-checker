@@ -1,152 +1,124 @@
 /* SymptomInput.css */
-
-/* Root container */
 .symptom-input-container {
   width: 100%;
-  max-width: 100%;
-  padding: 0;
-  margin: 0;
-  background: #000;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  box-sizing: border-box;
+  max-width: none;
+  padding: 2px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  color: #333;
 }
 
-/* Input group (general container for inputs) */
 .input-group {
-  width: 100%;
-  margin: 8px 0;
-}
-
-/* TextField styling */
-.MuiTextField-root {
+  margin-bottom: 10px;
   width: 100%;
 }
 
-.MuiInputBase-root {
-  background: #000;
-  color: #fff;
-  border: 1px solid #fff;
+.input-group label {
+  display: block;
+  font-size: 0.9rem;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.input-group input,
+.input-group .select-button {
+  width: 100%;
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
   border-radius: 4px;
+  background: #fff;
+  transition: border-color 0.2s;
 }
 
-.MuiInputBase-input {
-  padding: 12px;
-  font-size: 16px;
-  color: #fff;
+.input-group input:focus,
+.input-group .select-button:focus {
+  border-color: #1a3c6e;
+  outline: none;
 }
 
-.MuiInputLabel-root {
-  color: #fff;
-  font-size: 14px;
-  transform: translate(12px, 12px) scale(1);
-}
-
-.MuiInputLabel-shrink {
-  transform: translate(12px, -6px) scale(0.75);
-  color: #fff;
-}
-
-.MuiInputBase-root.Mui-focused .MuiInputLabel-root {
-  color: #fff;
-}
-
-.MuiInputBase-root::before,
-.MuiInputBase-root::after {
-  border-bottom: none !important;
-}
-
-/* Custom Select button */
 .select-button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff;
-  color: #000;
-  padding: 12px;
-  border-radius: 4px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  background: #fff;
 }
 
-.select-button:hover {
-  opacity: 0.9;
+.select-text {
+  color: #333;
 }
 
-.select-text,
 .placeholder-text {
-  font-size: 16px;
-  color: #000;
+  color: #888;
 }
 
-/* Options container for dropdown */
 .options-container {
+  position: absolute;
   width: 100%;
   max-height: 200px;
   overflow-y: auto;
-  background: #000;
-  border: 1px solid #fff;
+  background: #fff;
+  border: 1px solid #ccc;
   border-radius: 4px;
-  margin-top: 4px;
-  position: absolute;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   z-index: 10;
+  margin-top: 2px;
 }
 
-.MuiMenuItem-root {
-  padding: 12px;
-  color: #fff;
-  font-size: 16px;
-  background: #000;
+.option-item {
+  padding: 8px;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
   transition: background 0.2s;
 }
 
-.MuiMenuItem-root:hover {
-  background: #333;
+.option-item:hover {
+  background: #f0f5ff;
 }
 
-.selected-option {
-  background: #333 !important;
-}
-
-.selected-option-text {
+.option-item.selected {
+  background: #e0e7ff;
   font-weight: 500;
-  color: #fff;
 }
 
-.check-icon {
-  color: #fff;
+.option-item .check-icon {
   margin-left: 8px;
+  color: #1a3c6e;
 }
 
-/* Suggestions container */
 .suggestions-container {
-  width: 100%;
-  background: #000;
-  border: 1px solid #fff;
+  background: #fff;
+  border: 1px solid #ccc;
   border-radius: 4px;
-  margin-top: 4px;
-  position: absolute;
-  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 2px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .suggestion {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  background: #fff;
-  color: #000;
+  padding: 8px;
+  font-size: 0.9rem;
+  color: #333;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: background 0.2s;
 }
 
 .suggestion:hover {
-  opacity: 0.9;
+  background: #f0f5ff;
+}
+
+.combination-suggestion {
+  background: #f9fafb;
 }
 
 .suggestion-text {
-  font-size: 16px;
-  color: #000;
+  display: flex;
+  align-items: center;
 }
 
 .combination-text {
@@ -154,10 +126,9 @@
 }
 
 .add-icon {
-  color: #000;
+  color: #1a3c6e;
 }
 
-/* Selected symptoms (Chips) */
 .selected-container {
   display: flex;
   flex-wrap: wrap;
@@ -165,70 +136,46 @@
   margin-top: 8px;
 }
 
-.MuiChip-root {
-  background: #000;
+.selected-symptom {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 0.85rem;
   color: #fff;
-  font-size: 14px;
-  height: 28px;
-  border: 1px solid #fff;
-  border-radius: 14px;
+  background: #1a3c6e;
+  border-radius: 12px;
 }
 
-.MuiChip-label {
-  padding: 0 12px;
+.delete-icon {
+  margin-left: 4px;
+  cursor: pointer;
 }
 
-.MuiChip-deleteIcon {
-  color: #fff;
-  margin-right: 8px;
+.delete-icon:hover {
+  color: #ff4444;
 }
 
-.MuiChip-deleteIcon:hover {
-  color: #ccc;
-}
-
-/* Row container for duration inputs */
 .row-container {
   display: flex;
-  gap: 8px;
-  width: 100%;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .duration-input {
   flex: 1;
+  min-width: 100px;
 }
 
 .duration-unit {
-  flex: 1;
+  flex: 0 0 120px;
 }
 
-/* Scrollbar styling for dropdowns */
-.options-container::-webkit-scrollbar,
-.suggestions-container::-webkit-scrollbar {
-  width: 8px;
-}
+@media (max-width: 768px) {
+  .row-container {
+    flex-direction: column;
+  }
 
-.options-container::-webkit-scrollbar-track,
-.suggestions-container::-webkit-scrollbar-track {
-  background: #000;
-}
-
-.options-container::-webkit-scrollbar-thumb,
-.suggestions-container::-webkit-scrollbar-thumb {
-  background: #fff;
-  border-radius: 4px;
-}
-
-.options-container::-webkit-scrollbar-thumb:hover,
-.suggestions-container::-webkit-scrollbar-thumb:hover {
-  background: #ccc;
-}
-
-/* Focus states for accessibility */
-.MuiInputBase-root.Mui-focused,
-.select-button:focus,
-.suggestion:focus,
-.MuiMenuItem-root:focus {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
+  .duration-unit {
+    flex: 1;
+  }
 }
