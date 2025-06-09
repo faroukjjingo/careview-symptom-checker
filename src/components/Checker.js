@@ -1,44 +1,139 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import SymptomInput from './SymptomInput';
 import calculateDiagnosis from './SymptomCalculations';
-import './Checker.css';
+import {
+  Box,
+  Typography,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Card,
+  CardContent,
+  CardHeader,
+  Chip,
+  Collapse,
+  List,
+  ListItem,
+  ListItemText,
+  LinearProgress,
+  CircularProgress,
+  styled,
+} from '@mui/material';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
 
-const DiagnosisCard = ({ diagnosis, probability, confidence, matchingFactors, index, isExpanded, onToggle, source, explanation }) => {
+const StyledCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  borderRadius: 12,
+  boxShadow: theme.shadows[3],
+  '&:hover': { boxShadow: theme.shadows[5] },
+}));
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  minWidth: 200,
+  marginBottom: theme.spacing(2),
+  '& .MuiInputBase-root': {
+    borderRadius: 8,
+  },
+}));
+
+const StyledButton = styled(Button)(({ theme }) => ({
+  borderRadius: 8,
+  padding: theme.spacing(1.5),
+  textTransform: 'none',
+  fontWeight: 600,
+}));
+
+const ConfidenceChip = styled(Chip)(({ theme, confidence }) => ({
+  backgroundColor:
+    confidence === 'high'
+      ? theme.palette.success.light
+      : confidence === 'medium'
+      ? theme.palette.warning.light
+      : theme.palette.error.light,
+  color: theme.palette.getContrastText(
+    confidence === 'high'
+      ? theme.palette.success.light
+      : confidence === 'medium'
+      ? theme.palette.warning.light
+      : theme.palette.error.light
+  ),
+}));
+
+const ProgressContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(2),
+  margin: theme.spacing(2, 0),
+}));
+
+const DiagnosisCard = ({
+  diagnosis,
+  probability,
+  confidence,
+  matchingFactors,
+  index,
+  isExpanded,
+  onToggle,
+  source,
+  explanation,
+}) => {
   return (
-    <div className="diagnosis-card" role="region" aria-labelledby={`diagnosis-${index}`}>
-      <div className="card-header" onClick={() => onToggle(index)}>
-        <h3 id={`diagnosis-${index}`}>{diagnosis}</h3>
-        <div className="card-header-right">
-          <span className={`confidence-chip ${confidence.toLowerCase()}`}>{confidence}</span>
-          <span>{probability}% Likely</span>
-          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </div>
-      </div>
-      {isExpanded && (
-        <div className="card-content">
-          <h4>Explanation</h4>
-          <p>{explanation}</p>
-          <p className="source">Source: {source}</p>
-          <h4>Matching Symptoms</h4>
-          <p>{matchingFactors.symptomMatch || 'None'}</p>
-          <h4>Matching Combinations</h4>
+    <StyledCard>
+      <CardHeader
+        title={diagnosis}
+        action={
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <ConfidenceChip label={confidence} confidence={confidence.toLowerCase()} />
+            <Typography variant="body2">{probability}% Likely</Typography>
+            {isExpanded ? <ExpandLess /> : <ExpandMore />}
+          </Box>
+        }
+        onClick={() => onToggle(index)}
+        sx={{ cursor: 'pointer' }}
+      />
+      <Collapse in={isExpanded}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Explanation
+          </Typography>
+          <Typography variant="body2" paragraph>
+            {explanation}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Source: {source}
+          </Typography>
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            Matching Symptoms
+          </Typography>
+          <Typography variant="body2">{matchingFactors.symptomMatch || 'None'}</Typography>
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            Matching Combinations
+          </Typography>
           {matchingFactors.combinationMatches.length > 0 ? (
-            matchingFactors.combinationMatches.map((combo, idx) => (
-              <p key={idx}>
-                {combo.combination} ({combo.isExactMatch ? 'Exact' : 'Partial'})
-              </p>
-            ))
+            <List dense>
+              {matchingFactors.combinationMatches.map((combo, idx) => (
+                <ListItem key={idx}>
+                  <ListItemText primary={`${combo.combination} (${combo.isExactMatch ? 'Exact' : 'Partial'})`} />
+                </ListItem>
+              ))}
+            </List>
           ) : (
-            <p className="none">None</p>
+            <Typography variant="body2" color="text.secondary">
+              None
+            </Typography>
           )}
-          <h4>Other Factors</h4>
-          <p>Risk Factors: {matchingFactors.riskFactorMatch || 'None'}</p>
-          <p>Travel: {matchingFactors.travelRiskMatch || 'None'}</p>
-          <p>Drug History: {matchingFactors.drugHistoryMatch || 'None'}</p>
-        </div>
-      )}
-    </div>
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+            Other factors
+          </Typography>
+          <Typography variant="body2">Risk Factors: {matchingFactors.riskFactorMatch || 'None'}</Typography>
+          <Typography variant="body2">Travel: {matchingFactors.travelRiskMatch || 'None'}</Typography>
+          <Typography variant="body2">Drug History: {matchingFactors.drugHistoryMatch || 'None'}</Typography>
+        </CardContent>
+      </Collapse>
+    </StyledCard>
   );
 };
 
@@ -55,7 +150,7 @@ const Checker = () => {
   const [travelRegion, setTravelRegion] = useState('');
   const [drugHistory, setDrugHistory] = useState('');
   const [diagnosis, setDiagnosis] = useState([]);
-  const [error, setError] = useState(null);
+  const [errorMessage, setError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expandedCard, setExpandedCard] = useState(null);
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -64,7 +159,7 @@ const Checker = () => {
     setPatientInfo((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSymptomSelect = (symptoms) => {
+  const handleSelectSymptoms = (symptoms) => {
     setSelectedSymptoms(symptoms);
   };
 
@@ -76,9 +171,7 @@ const Checker = () => {
           clearInterval(interval);
           setIsAnalyzing(false);
           setDiagnosis(result.detailed);
-          if (result.redFlag) {
-            setError(result.redFlag);
-          }
+          if (result.redFlag) setError(result.redFlag);
           return 100;
         }
         return prev + 10;
@@ -95,7 +188,7 @@ const Checker = () => {
     }
 
     setIsAnalyzing(true);
-    setError(null);
+    setError('');
 
     try {
       const result = await calculateDiagnosis(
@@ -120,7 +213,7 @@ const Checker = () => {
 
       simulateAnalysis(result);
     } catch (err) {
-      setError('Error analyzing symptoms. Please try again.');
+        setError('Error analyzing symptoms. Please try again.');
       setDiagnosis([]);
       alert('Error analyzing symptoms.');
       setIsAnalyzing(false);
@@ -129,89 +222,101 @@ const Checker = () => {
 
   useEffect(() => {
     document.body.style.cursor = isAnalyzing ? 'wait' : 'default';
+    return () => {
+      document.body.style.cursor = 'default';
+    };
   }, [isAnalyzing]);
 
   return (
-    <div className="checker-container">
-      <div className="checker-header">
-        <h1>Symptom Checker</h1>
-        <p>Enter your symptoms to get a potential diagnosis</p>
-      </div>
+    <Box sx={{ maxWidth: 800, margin: '0 auto', padding: 2 }}>
+      <Box sx={{ mb: 4, textAlign: 'center' }}>
+        <Typography variant="h4" gutterBottom>
+          Symptom Checker
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Enter your symptoms to get a potential diagnosis
+        </Typography>
+      </Box>
 
-      <div className="input-section">
-        <SymptomInput
-          onSelectSymptoms={handleSymptomSelect}
-          patientInfo={patientInfo}
-          onPatientInfoChange={handlePatientInfoChange}
-        />
+      <SymptomInput
+        onSelectSymptoms={handleSelectSymptoms}
+        patientInfo={patientInfo}
+        onPatientInfoChange={handlePatientInfoChange}
+      />
 
-        <div className="additional-inputs">
-          <h2>Additional Factors</h2>
-          <div className="grid-container">
-            <div className="form-group">
-              <label htmlFor="risk-select">Risk Factors</label>
-              <select
-                id="risk-select"
-                multiple
-                value={selectedRiskFactors}
-                onChange={(e) =>
-                  setSelectedRiskFactors(
-                    Array.from(e.target.selectedOptions, (option) => option.value)
-                  )
-                }
-              >
-                <option value="smoking">Smoking</option>
-                <option value="diabetes">Diabetes</option>
-                <option value="hypertension">Hypertension</option>
-                <option value="obesity">Obesity</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="travel-select">Travel Region</label>
-              <select
-                id="travel-select"
-                value={travelRegion}
-                onChange={(e) => setTravelRegion(e.target.value)}
-              >
-                <option value="">None</option>
-                <option value="sub_saharan_africa">Sub-Saharan Africa</option>
-                <option value="southeast_asia">Southeast Asia</option>
-                <option value="south_america">South America</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="drug-history">Drug History</label>
-              <input
-                type="text"
-                id="drug-history"
-                value={drugHistory}
-                onChange={(e) => setDrugHistory(e.target.value)}
-                placeholder="e.g., Steroids, Antidepressants"
-              />
-            </div>
-          </div>
-          <button
-            className="check-button"
-            onClick={handleCheckDiagnosis}
-            disabled={isAnalyzing}
-          >
-            {isAnalyzing ? 'Analyzing...' : 'Analyze Symptoms'}
-          </button>
-        </div>
-      </div>
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          Additional Factors
+        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2, mb: 2 }}>
+          <StyledFormControl>
+            <InputLabel id="risk-select-label">Risk Factors</InputLabel>
+            <Select
+              labelId="risk-select-label"
+              label="Risk Factors"
+              multiple
+              value={selectedRiskFactors}
+              onChange={(e) => setSelectedRiskFactors(e.target.value)}
+              renderValue={(selected) => selected.join(', ')}
+            >
+              {['Smoking', 'Diabetes', 'Hypertension', 'Obesity'].map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </StyledFormControl>
+          <StyledFormControl>
+            <InputLabel id="travel-select-label">Travel Region</InputLabel>
+            <Select
+              labelId="travel-select-label"
+              label="Travel Region"
+              value={travelRegion}
+              onChange={(e) => setTravelRegion(e.target.value)}
+            >
+              <MenuItem value="">None</MenuItem>
+              <MenuItem value="sub_saharan_africa">Sub-Saharan Africa</MenuItem>
+              <MenuItem value="southeast_asia">Southeast Asia</MenuItem>
+              <MenuItem value="south_america">South America</MenuItem>
+            </Select>
+          </StyledFormControl>
+          <TextField
+            fullWidth
+            label="Drug History"
+            value={drugHistory}
+            onChange={(e) => setDrugHistory(e.target.value}
+            placeholder="e.g., Steroids, Antidepressants"
+            sx={{ marginBottom: 2 }}
+          />
+        </Box>
+        <StyledButton
+          variant="contained"
+          fullWidth
+          onClick={handleCheckDiagnosis}
+          disabled={isAnalyzing}
+        >
+          {isAnalyzing ? 'Analyzing...' : 'Analyze Symptoms'}
+        </StyledButton>
+      </Box>
 
-      {error && <div className="error-message">{error}</div>}
+      {errorMessage && (
+        <Typography color="error" sx={{ mt: 2, textAlign: 'center' }}>
+          {errorMessage}
+        </Typography>
+      )}
 
       {diagnosis.length > 0 && (
-        <div className="results-section">
-          <h2>Diagnosis Results</h2>
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Diagnosis Results
+          </Typography>
           {isAnalyzing ? (
-            <div className="progress-container">
-              <div className="progress-spinner"></div>
-              <div className="progress-bar">
-                <div className="progress" style={{ width: `${analysisProgress}%` }}></div>
-              </div>
-            </div>
+            <ProgressContainer>
+              <CircularProgress size={24} />
+              <Box sx={{ flexGrow: 1 }}>
+                <LinearProgress variant="determinate" value={analysisProgress} />
+              </Box>
+            </ProgressContainer>
           ) : (
             diagnosis.map((diag, index) => (
               <DiagnosisCard
@@ -228,9 +333,9 @@ const Checker = () => {
               />
             ))
           )}
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 
