@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X, ChevronDown, ChevronUp, Link } from 'lucide-react';
-import { symptomList, symptomCombinations } from './SymptomList';
+import { symptomList } from './SymptomList';
+import { symptomCombinations } from './SymptomCombinations';
 import './SymptomInput.css';
 
 const CustomSelect = ({ label, value, options, onSelect, placeholder }) => {
