@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { symptomList, symptomCombinations } from './SymptomList';
+import { symptomList } from './SymptomList';
 import {
   Box,
   TextField,
@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import LinkIcon from '@mui/icons-material/Link';
+import { symptomCombinations } from './SymptomCombinations';
 
 const StyledFormControl = styled(FormControl)(({ theme }) => ({
   minWidth: 200,
