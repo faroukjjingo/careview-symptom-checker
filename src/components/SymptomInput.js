@@ -155,7 +155,7 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
         type="number"
         value={patientInfo.age}
         onChange={(e) => onPatientInfoChange('age', e.target.value)}
-        placeholder="Enter your age"
+        placeholder=" "
       />
 
       <CustomSelect
@@ -163,7 +163,7 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
         value={patientInfo.gender}
         options={['Male', 'Female', 'Other']}
         onSelect={(value) => onPatientInfoChange('gender', value)}
-        placeholder="Select your gender"
+        placeholder=" "
       />
 
       <Box sx={{ position: 'relative', marginBottom: 2 }}>
@@ -240,7 +240,7 @@ const SymptomInput = ({ onSelectSymptoms, patientInfo, onPatientInfoChange }) =>
         value={patientInfo.severity}
         options={['Mild', 'Moderate', 'Severe']}
         onSelect={(value) => onPatientInfoChange('severity', value)}
-        placeholder="Select severity level"
+        placeholder=" "
       />
     </Box>
   );
