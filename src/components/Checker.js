@@ -1,46 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Paper, Typography, Button, Box, CircularProgress, Select, MenuItem, InputLabel, FormControl, TextField, Collapse, Chip, Grid } from '@material-ui/core';
-import { Alert } from '@material-ui/lab';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import SymptomInput from './SymptomInput';
 import calculateDiagnosis from './SymptomCalculations';
-
+import './Checker.css';
 
 const DiagnosisCard = ({ diagnosis, probability, confidence, matchingFactors, index, isExpanded, onToggle, source, explanation }) => {
-  const confidenceColor = confidence === 'High' ? '#4caf50' : confidence === 'Medium' ? '#fbc02d' : '#f44336';
-
   return (
-    <Paper elevation={3} className="diagnosis-card" role="region" aria-labelledby={`diagnosis-${index}`}>
-      <Box className="card-header" onClick={() => onToggle(index)}>
-        <Typography variant="h6">{diagnosis}</Typography>
-        <Box className="card-header-right">
-          <Chip label={confidence} style={{ backgroundColor: confidenceColor, color: '#fff' }} />
-          <Typography variant="body2">{probability}% Likely</Typography>
+    <div className="diagnosis-card" role="region" aria-labelledby={`diagnosis-${index}`}>
+      <div className="card-header" onClick={() => onToggle(index)}>
+        <h3 id={`diagnosis-${index}`}>{diagnosis}</h3>
+        <div className="card-header-right">
+          <span className={`confidence-chip ${confidence.toLowerCase()}`}>{confidence}</span>
+          <span>{probability}% Likely</span>
           {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </Box>
-      </Box>
-      <Collapse in={isExpanded}>
-        <Box className="card-content">
-          <Typography variant="subtitle2">Explanation</Typography>
-          <Typography variant="body2">{explanation}</Typography>
-          <Typography variant="caption" color="textSecondary">Source: {source}</Typography>
-          <Typography variant="subtitle2">Matching Symptoms</Typography>
-          <Typography variant="body2">{matchingFactors.symptomMatch || 'None'}</Typography>
-          <Typography variant="subtitle2">Matching Combinations</Typography>
+        </div>
+      </div>
+      {isExpanded && (
+        <div className="card-content">
+          <h4>Explanation</h4>
+          <p>{explanation}</p>
+          <p className="source">Source: {source}</p>
+          <h4>Matching Symptoms</h4>
+          <p>{matchingFactors.symptomMatch || 'None'}</p>
+          <h4>Matching Combinations</h4>
           {matchingFactors.combinationMatches.length > 0 ? (
             matchingFactors.combinationMatches.map((combo, idx) => (
-              <Typography key={idx} variant="body2">{combo.combination} ({combo.isExactMatch ? 'Exact' : 'Partial'})</Typography>
+              <p key={idx}>
+                {combo.combination} ({combo.isExactMatch ? 'Exact' : 'Partial'})
+              </p>
             ))
           ) : (
-            <Typography variant="body2">None</Typography>
+            <p className="none">None</p>
           )}
-          <Typography variant="subtitle2">Other Factors</Typography>
-          <Typography variant="body2">Risk Factors: {matchingFactors.riskFactorMatch || 'None'}</Typography>
-          <Typography variant="body2">Travel: {matchingFactors.travelRiskMatch || 'None'}</Typography>
-          <Typography variant="body2">Drug History: {matchingFactors.drugHistoryMatch || 'None'}</Typography>
-        </Box>
-      </Collapse>
-    </Paper>
+          <h4>Other Factors</h4>
+          <p>Risk Factors: {matchingFactors.riskFactorMatch || 'None'}</p>
+          <p>Travel: {matchingFactors.travelRiskMatch || 'None'}</p>
+          <p>Drug History: {matchingFactors.drugHistoryMatch || 'None'}</p>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -51,7 +49,7 @@ const Checker = () => {
     gender: '',
     duration: '',
     durationUnit: 'Days',
-    severity: ''
+    severity: '',
   });
   const [selectedRiskFactors, setSelectedRiskFactors] = useState([]);
   const [travelRegion, setTravelRegion] = useState('');
@@ -63,7 +61,7 @@ const Checker = () => {
   const [analysisProgress, setAnalysisProgress] = useState(0);
 
   const handlePatientInfoChange = (field, value) => {
-    setPatientInfo(prev => ({ ...prev, [field]: value }));
+    setPatientInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSymptomSelect = (symptoms) => {
@@ -73,7 +71,7 @@ const Checker = () => {
   const simulateAnalysis = (result) => {
     setAnalysisProgress(0);
     const interval = setInterval(() => {
-      setAnalysisProgress(prev => {
+      setAnalysisProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
           setIsAnalyzing(false);
@@ -138,88 +136,88 @@ const Checker = () => {
   }, [isAnalyzing]);
 
   return (
-    <Container maxWidth="md" className="checker-container">
-      <Box textAlign="center" my={4}>
-        <Typography variant="h4">Symptom Checker</Typography>
-        <Typography variant="body1" color="textSecondary">Enter your symptoms to get a potential diagnosis</Typography>
-      </Box>
+    <div className="checker-container">
+      <div className="checker-header">
+        <h1>Symptom Checker</h1>
+        <p>Enter your symptoms to get a potential diagnosis</p>
+      </div>
 
-      <Paper elevation={3} className="input-section">
+      <div className="input-section">
         <SymptomInput
           onSelectSymptoms={handleSymptomSelect}
           patientInfo={patientInfo}
           onPatientInfoChange={handlePatientInfoChange}
         />
 
-        <Box className="additional-inputs">
-          <Typography variant="h6">Additional Factors</Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Risk Factors</InputLabel>
-                <Select
-                  multiple
-                  value={selectedRiskFactors}
-                  onChange={(e) => setSelectedRiskFactors(e.target.value)}
-                >
-                  <MenuItem value="smoking">Smoking</MenuItem>
-                  <MenuItem value="diabetes">Diabetes</MenuItem>
-                  <MenuItem value="hypertension">Hypertension</MenuItem>
-                  <MenuItem value="obesity">Obesity</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Travel Region</InputLabel>
-                <Select
-                  value={travelRegion}
-                  onChange={(e) => setTravelRegion(e.target.value)}
-                >
-                  <MenuItem value="">None</MenuItem>
-                  <MenuItem value="sub_saharan_africa">Sub-Saharan Africa</MenuItem>
-                  <MenuItem value="southeast_asia">Southeast Asia</MenuItem>
-                  <MenuItem value="south_america">South America</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Drug History"
+        <div class="additional-inputs">
+          <h2>Additional Factors</h2>
+          <div class="grid-container">
+            <div class="form-group">
+              <label for="risk-select">Risk Factors</label>
+              <select
+                id="risk-select"
+                multiple
+                value={selectedRiskFactors}
+                onChange={(e) =>
+                  setSelectedRiskFactors(
+                    Array.from(e.target.selectedOptions, (option) => option.value)
+                  )
+                }
+              >
+                <option value="smoking">Smoking</option>
+                <option value="diabetes">Diabetes</option>
+                <option value="hypertension">Hypertension</option>
+                <option value="obesity">Obesity</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="travel-select">Travel Region</label>
+              <select
+                id="travel-select"
+                value={travelRegion}
+                onChange={(e) => setTravelRegion(e.target.value)}
+              >
+                <option value="">None</option>
+                <option value="sub_saharan_africa">Sub-Saharan Africa</option>
+                <option value="southeast_asia">Southeast Asia</option>
+                <option value="south_america">South America</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="drug-history">Drug History</label>
+              <input
+                type="text"
+                id="drug-history"
                 value={drugHistory}
                 onChange={(e) => setDrugHistory(e.target.value)}
                 placeholder="e.g., Steroids, Antidepressants"
               />
-            </Grid>
-          </Grid>
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            onClick={handleCheckDiagnosis}
-            disabled={isAnalyzing}
-            className="check-button"
+            </div>
+          </div>
+          <button
+            class="check-button"
+              onClick={handleCheckDiagnosis}
+              disabled={isAnalyzing}}
           >
             {isAnalyzing ? 'Analyzing...' : 'Analyze Symptoms'}
-          </Button>
-        </Box>
-      </Paper>
+          </button>
+        </div>
+      </div>
 
       {error && (
-        <Alert severity="error" className="error-message">{error}</Alert>
+        <div class="error-message">{error}</div>
       )}
 
       {diagnosis.length > 0 && (
-        <Paper elevation={3} className="results-section">
-          <Typography variant="h5">Diagnosis Results</Typography>
+        <div class="results-section">
+          <h2>Diagnosis Results</h2>
           {isAnalyzing ? (
-            <Box className="progress-container">
-              <CircularProgress />
-              <Box className="progress-bar">
-                <Box className="progress" style={{ width: `${analysisProgress}%` }}></Box>
-              </Box>
-            </Box>
+            <div class="progress-container">
+              <div class="progress-spinner"></div>
+              <div class="progress-bar">
+                <div class="progress" style={{ width: `${analysisProgress}%` }}></div>
+              </div>
+            </div>
           ) : (
             diagnosis.map((diag, index) => (
               <DiagnosisCard
@@ -232,13 +230,13 @@ const Checker = () => {
                 isExpanded={expandedCard === index}
                 onToggle={toggleCard}
                 source={diag.source}
-                explanation={diag.explanation}
+                explanation={diagnosis.explanation}}
               />
-            ))
+            ))}
           )}
-        </Paper>
+        </div>
       )}
-    </Container>
+    </div>
   );
 };
 
