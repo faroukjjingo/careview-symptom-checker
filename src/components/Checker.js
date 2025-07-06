@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
-import calculateDiagnosis from './calculateDiagnosis';
+import calculateDiagnosis from './SymptomCalculations';
 import { guidance } from './guidance';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
