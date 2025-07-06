@@ -1,6 +1,5 @@
 // calculateDiagnosis.js
 import { symptomCombinations } from './SymptomCombinations';
-import { symptomWeights } from './SymptomWeights';
 import riskFactorWeights from './RiskFactorWeights';
 import travelRiskFactors from './TravelRiskFactors';
 import drugHistoryWeights from './DrugHistoryWeights';
@@ -42,7 +41,9 @@ const calculateModifiers = (data, factors) => {
 };
 
 const normalizeScore = (score, maxScore) => {
-  return Math.min(99, Math.max(1, (score / maxScore) * 99));
+  // Apply logarithmic scaling to prevent extreme scores
+  const scaledScore = Math.log1p(score) / Math.log1p(maxScore);
+  return Math.min(99, Math.max(1, scaledScore * 99));
 };
 
 const getConfidenceLevel = (probability) => {
@@ -63,8 +64,33 @@ const calculateDiagnosis = async (
   riskFactors
 ) => {
   try {
-    if (!symptoms || symptoms.length === 0) {
-      return { error: 'At least one symptom is required' };
+    // Validate inputs
+    if (!symptoms || symptoms.length < 2) {
+      return { error: 'At least two symptoms are required' };
+    }
+    if (!duration || isNaN(duration)) {
+      return { error: 'Duration must be a valid number' };
+    }
+    if (!durationUnit || !['days', 'weeks', 'months'].includes(durationUnit.toLowerCase())) {
+      return { error: 'Valid duration unit (Days, Weeks, Months) is required' };
+    }
+    if (!severity || !['mild', 'moderate', 'severe'].includes(severity.toLowerCase())) {
+      return { error: 'Severity (Mild, Moderate, Severe) is required' };
+    }
+    if (!age || isNaN(parseInt(age))) {
+      return { error: 'Age must be a valid number' };
+    }
+    if (!gender || !['male', 'female', 'other'].includes(gender.toLowerCase())) {
+      return { error: 'Gender (Male, Female, Other) is required' };
+    }
+    if (!travelRegion || !Object.keys(travelRiskFactors).includes(travelRegion)) {
+      return { error: 'Valid travel region is required' };
+    }
+    if (!drugHistory || !Object.keys(drugHistoryWeights).includes(drugHistory)) {
+      return { error: 'Valid drug history is required' };
+    }
+    if (!Array.isArray(riskFactors)) {
+      return { error: 'Risk factors must be an array' };
     }
 
     const normalizedDuration = normalizeDuration(duration, durationUnit);
@@ -73,45 +99,34 @@ const calculateDiagnosis = async (
     const ageGroup = categorizeAge(age);
     const factors = {
       duration: durationCategory,
-      severity: severity.toLowerCase() || 'moderate',
+      severity: severity.toLowerCase(),
       ageGroup,
-      gender: gender.toLowerCase() || 'unknown',
-      travelRegion: travelRegion || '',
-      riskFactors: riskFactors || [],
-      drugHistory: drugHistory || '',
+      gender: gender.toLowerCase(),
+      travelRegion,
+      riskFactors,
+      drugHistory,
     };
 
     const diseaseScores = {};
     const unmatchedSymptoms = [];
-    const maxPossibleScore = 400;
-
-    // Score individual symptoms
-    for (const symptom of symptoms) {
-      if (symptomWeights[symptom]) {
-        const diseases = symptomWeights[symptom];
-        for (const [disease, data] of Object.entries(diseases)) {
-          diseaseScores[disease] = diseaseScores[disease] || 0;
-          const baseScore = data.weight || 1;
-          const modifiers = calculateModifiers(data, factors);
-          diseaseScores[disease] += baseScore * modifiers * 10;
-        }
-      } else {
-        unmatchedSymptoms.push(symptom);
-      }
-    }
+    const maxPossibleScore = 500; // Adjusted for combined contributions
 
     // Score symptom combinations
     const symptomSet = new Set(symptoms);
+    let matchedCombination = false;
     for (const comboKey of Object.keys(symptomCombinations)) {
       const comboSymptoms = comboKey.split(', ').map((s) => s.trim());
       const intersection = comboSymptoms.filter((s) => symptomSet.has(s));
-      if (intersection.length >= 2) {
-        const matchRatio = intersection.length / comboSymptoms.length;
+      if (intersection.length === comboSymptoms.length) { // Require full match
+        matchedCombination = true;
         const diseases = symptomCombinations[comboKey];
         for (const [disease, weight] of Object.entries(diseases)) {
           diseaseScores[disease] = diseaseScores[disease] || 0;
-          diseaseScores[disease] += weight * matchRatio * 25;
+          const modifiers = calculateModifiers({ weight }, factors);
+          diseaseScores[disease] += weight * modifiers * 30; // Increased weight for combinations
         }
+      } else {
+        unmatchedSymptoms.push(...intersection);
       }
     }
 
@@ -121,7 +136,7 @@ const calculateDiagnosis = async (
         const diseases = riskFactorWeights[factor];
         for (const [disease, weight] of Object.entries(diseases)) {
           diseaseScores[disease] = diseaseScores[disease] || 0;
-          diseaseScores[disease] += weight * 4;
+          diseaseScores[disease] += weight * 5;
         }
       }
     }
@@ -131,7 +146,7 @@ const calculateDiagnosis = async (
       const diseases = travelRiskFactors[factors.travelRegion];
       for (const [disease, weight] of Object.entries(diseases)) {
         diseaseScores[disease] = diseaseScores[disease] || 0;
-        diseaseScores[disease] += weight * 4;
+        diseaseScores[disease] += weight * 5;
       }
     }
 
@@ -140,7 +155,7 @@ const calculateDiagnosis = async (
       const diseases = drugHistoryWeights[factors.drugHistory];
       for (const [disease, weight] of Object.entries(diseases)) {
         diseaseScores[disease] = diseaseScores[disease] || 0;
-        diseaseScores[disease] += weight * 3;
+        diseaseScores[disease] += weight * 4;
       }
     }
 
@@ -149,7 +164,7 @@ const calculateDiagnosis = async (
     if (hasRedFlag) {
       for (const disease of ['heart attack', 'pulmonary embolism', 'meningitis', 'appendicitis']) {
         if (diseaseScores[disease]) {
-          diseaseScores[disease] *= 1.4;
+          diseaseScores[disease] *= 1.5; // Increased boost for urgency
         }
       }
     }
@@ -162,46 +177,25 @@ const calculateDiagnosis = async (
           diagnosis: disease,
           probability: Math.round(probability * 100 * 10) / 10,
           confidence: getConfidenceLevel(probability),
-          explanation: `Based on ${symptoms.length} symptom(s), ${factors.riskFactors.length} risk factor(s), and additional factors`,
+          explanation: `Based on symptom combinations, ${factors.riskFactors.length} risk factor(s), travel to ${factors.travelRegion}, and drug history (${factors.drugHistory})`,
         };
       })
       .sort((a, b) => b.probability - a.probability);
 
-    // Fallback for single or unmatched symptoms
-    if (detailed.length === 0 || Object.keys(diseaseScores).length === 0) {
-      detailed = symptoms.flatMap((symptom) => {
-        if (symptomWeights[symptom]) {
-          return Object.entries(symptomWeights[symptom]).map(([disease, data]) => {
-            const score = (data.weight || 1) * calculateModifiers(data, factors) * 10;
-            const probability = normalizeScore(score, maxPossibleScore) / 100;
-            return {
-              diagnosis: disease,
-              probability: Math.round(probability * 100 * 10) / 10,
-              confidence: getConfidenceLevel(probability),
-              explanation: `Based on symptom: ${symptom}`,
-            };
-          });
-        }
-        return [];
-      });
-      detailed = [...new Map(detailed.map((d) => [d.diagnosis, d])).values()]
-        .sort((a, b) => b.probability - a.probability);
-    }
-
-    // Ensure at least one result
-    if (detailed.length === 0) {
-      detailed = symptoms.map((symptom) => ({
-        diagnosis: 'Possible condition',
-        probability: 10,
-        confidence: 'Low',
-        explanation: `Unrecognized symptom: ${symptom}. Consult a healthcare provider.`,
-      }));
+    // Handle no matched combinations
+    if (!matchedCombination) {
+      return {
+        detailed: [],
+        redFlag: hasRedFlag ? 'Urgent: Seek immediate medical attention due to critical symptoms.' : null,
+        unmatchedSymptoms: [...new Set(unmatchedSymptoms)],
+        error: 'No valid symptom combinations matched. Ensure symptoms align with known combinations.',
+      };
     }
 
     return {
       detailed: detailed.slice(0, 5),
       redFlag: hasRedFlag ? 'Urgent: Seek immediate medical attention due to critical symptoms.' : null,
-      unmatchedSymptoms,
+      unmatchedSymptoms: [...new Set(unmatchedSymptoms)],
     };
   } catch (error) {
     console.error('Diagnosis error:', error);
