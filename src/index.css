@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255; /* Adjusted for dark mode */
-  --background-start-rgb: 20, 20, 20; /* Dark mode background */
-  --background-end-rgb: 40, 40, 40; /* Dark mode gradient */
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 20, 20, 20;
+  --background-end-rgb: 40, 40, 40;
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
   --card: 240 10% 3.9%;
