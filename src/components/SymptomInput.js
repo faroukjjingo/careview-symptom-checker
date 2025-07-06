@@ -13,8 +13,10 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState('welcome');
   const [messages, setMessages] = useState([
-    { text: "Hi there! I'm CareView, your friendly symptom checker. I'm here to guide you through understanding your symptoms. Type 'start' to begin or 'help' for more info.", isUser: false },
+    { text: "Hi there! I'm CareView, your friendly symptom checker. I'm here to guide you through understanding your symptoms. Type 'start' to begin or 'help' for more info.", isUser: false, isTyping: false },
   ]);
+  const [typingMessage, setTypingMessage] = useState('');
+  const [typingIndex, setTypingIndex] = useState(0);
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -42,6 +44,37 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       handleSubmit();
     }
   }, [currentStep]);
+
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && !lastMessage.isUser && lastMessage.isTyping && typingMessage) {
+      if (typingIndex < typingMessage.length) {
+        const timer = setTimeout(() => {
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1].text = typingMessage.slice(0, typingIndex + 1);
+            return updated;
+          });
+          setTypingIndex((prev) => prev + 1);
+        }, 30);
+        return () => clearTimeout(timer);
+      } else {
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1].isTyping = false;
+          return updated;
+        });
+        setTypingMessage('');
+        setTypingIndex(0);
+      }
+    }
+  }, [typingIndex, typingMessage, messages]);
+
+  const addBotMessage = (text) => {
+    setTypingMessage(text);
+    setTypingIndex(0);
+    setMessages((prev) => [...prev, { text: '', isUser: false, isTyping: true }]);
+  };
 
   const handleInputChange = (e) => {
     const text = e.target.value;
@@ -114,8 +147,8 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       setMessages((prev) => [
         ...prev,
         { text: `Added: ${uniqueNewSymptoms.join(', ')}`, isUser: true },
-        { text: `Got it! Any more symptoms? (You need at least two. Type "done" when ready.)`, isUser: false },
       ]);
+      addBotMessage(`Got it! Any more symptoms? (You need at least two. Type "done" when ready.)`);
       setError('');
     }
 
@@ -129,8 +162,8 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
     setMessages((prev) => [
       ...prev,
       { text: `Removed: ${symptomToRemove}`, isUser: true },
-      { text: `Any more symptoms to add or remove? (Type "done" when ready.)`, isUser: false },
     ]);
+    addBotMessage(`Any more symptoms to add or remove? (Type "done" when ready.)`);
   };
 
   const handlePatientInfoChange = (field, value) => {
@@ -139,16 +172,13 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
     setMessages((prev) => [
       ...prev,
       { text: `${field.charAt(0).toUpperCase() + field.slice(1)}: ${Array.isArray(value) ? value.join(', ') || 'None' : value}`, isUser: true },
-      { text: getNextPrompt(steps[field].next), isUser: false },
     ]);
     if (steps[field].validate({ ...patientInfo, [field]: value })) {
       setCurrentStep(steps[field].next);
+      addBotMessage(getNextPrompt(steps[field].next));
     } else {
       setError(steps[field].error);
-      setMessages((prev) => [
-        ...prev,
-        { text: steps[field].error, isUser: false },
-      ]);
+      addBotMessage(steps[field].error);
     }
     setInput('');
     setSuggestions([]);
@@ -194,10 +224,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       patientInfo.riskFactors
     );
     onDiagnosisResults(result);
-    setMessages((prev) => [
-      ...prev,
-      { text: "I've got your results! Scroll down to see the possible diagnoses.", isUser: false },
-    ]);
+    addBotMessage("I've got your results! Scroll down to see the possible diagnoses.");
   };
 
   const handleInputSubmit = (e) => {
@@ -213,47 +240,29 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
 
       if (currentStep === 'welcome') {
         if (inputLower === 'start') {
-          setMessages((prev) => [
-            ...prev,
-            { text: getNextPrompt('age'), isUser: false },
-          ]);
           setCurrentStep('age');
+          addBotMessage(getNextPrompt('age'));
         } else if (inputLower === 'help') {
-          setMessages((prev) => [
-            ...prev,
-            { text: "I'm CareView, here to help you understand your symptoms. I'll guide you step-by-step to enter your details. Type 'start' to begin, use the dropdowns to select options, or type your answers. You can type 'done' for symptoms or 'none' for optional fields like risk factors or travel.", isUser: false },
-          ]);
+          addBotMessage("I'm CareView, here to help you understand your symptoms. I'll guide you step-by-step to enter your details. Type 'start' to begin, use the dropdowns to select options, or type your answers. You can type 'done' for symptoms or 'none' for optional fields like risk factors or travel.");
         } else {
-          setMessages((prev) => [
-            ...prev,
-            { text: "Hmm, please type 'start' to begin or 'help' for more info.", isUser: false },
-          ]);
+          addBotMessage("Hmm, please type 'start' to begin or 'help' for more info.");
         }
         setInput('');
       } else if (currentStep === 'symptoms') {
         if (inputLower === 'done') {
           if (selectedSymptoms.length < 2) {
             setError('Please select at least two symptoms.');
-            setMessages((prev) => [
-              ...prev,
-              { text: 'You need at least two symptoms to proceed. Please add more or select from the list.', isUser: false },
-            ]);
+            addBotMessage('You need at least two symptoms to proceed. Please add more or select from the list.');
           } else {
-            setMessages((prev) => [
-              ...prev,
-              { text: getNextPrompt(steps[currentStep].next), isUser: false },
-            ]);
             setCurrentStep(steps[currentStep].next);
+            addBotMessage(getNextPrompt(steps[currentStep].next));
             setInput('');
           }
         } else if (suggestions.length > 0) {
           handleSymptomSelect(suggestions[0]);
         } else {
           setError('Please select a valid symptom from the list.');
-          setMessages((prev) => [
-            ...prev,
-            { text: 'That symptom isn’t in our list. Please select one from the suggestions.', isUser: false },
-          ]);
+          addBotMessage('That symptom isn’t in our list. Please select one from the suggestions.');
           setInput('');
         }
       } else if (currentStep === 'riskFactors' && inputLower === 'none') {
@@ -266,10 +275,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           handlePatientInfoChange(currentStep, input);
         } else {
           setError(steps[currentStep].error);
-          setMessages((prev) => [
-            ...prev,
-            { text: steps[currentStep].error, isUser: false },
-          ]);
+          addBotMessage(steps[currentStep].error);
           setInput('');
         }
       } else if (['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
@@ -289,10 +295,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           handlePatientInfoChange(currentStep, suggestions[0].text);
         } else {
           setError(`Please select a valid ${currentStep} from the suggestions or type a matching value.`);
-          setMessages((prev) => [
-            ...prev,
-            { text: `That’s not a valid ${currentStep}. Please select from the suggestions or type a matching value.`, isUser: false },
-          ]);
+          addBotMessage(`That’s not a valid ${currentStep}. Please select from the suggestions or type a matching value.`);
           setInput('');
         }
       }
@@ -304,7 +307,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4 h-[70vh] flex flex-col bg-card rounded-lg shadow-md">
+    <div className="max-w-3xl mx-auto p-4 md:p-6 h-[70vh] flex flex-col bg-card rounded-lg shadow-md">
       <div className="flex-1 overflow-y-auto p-4 bg-background border border-border rounded-[var(--radius)] mb-4">
         {messages.map((msg, index) => (
           <div
@@ -314,10 +317,10 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <div
               className={`flex items-start gap-2 max-w-[80%] p-3 rounded-lg ${
                 msg.isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
-              }`}
+              } ${msg.isTyping ? 'skeleton' : ''}`}
             >
               {!msg.isUser && <Bot size={20} className="mt-1" />}
-              <span>{msg.text}</span>
+              <span className={msg.isTyping ? 'text-foreground/20' : ''}>{msg.text}</span>
             </div>
           </div>
         ))}
@@ -469,11 +472,11 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       )}
 
       {suggestions.length > 0 && (
-        <div className="absolute w-full max-w-xl max-h-60 overflow-y-auto bg-popover border border-border rounded-[var(--radius)] shadow-lg mt-1 z-10">
+        <div className="absolute w-full max-w-3xl max-h-60 overflow-y-auto bg-popover border border-border rounded-[var(--radius)] shadow-lg mt-1 z-10">
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
-              className="flex items-center p-2 cursor-pointer hover:bg-muted transition-colors"
+              className="flex items-center p-2 cursor-pointer hover:bg-muted transition-colors suggestion-highlight"
               onClick={() => (currentStep === 'symptoms' ? handleSymptomSelect(suggestion) : handlePatientInfoChange(currentStep, suggestion.text))}
             >
               <span className={suggestion.type === 'combination' ? 'italic text-muted-foreground' : 'text-foreground'}>{suggestion.text}</span>
