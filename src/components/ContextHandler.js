@@ -9,7 +9,7 @@ const steps = [
   { name: 'durationUnit', validate: (value) => ['Days', 'Weeks', 'Months'].includes(value) },
   { name: 'severity', validate: (value) => ['Mild', 'Moderate', 'Severe'].includes(value) },
   { name: 'travelRegion', validate: (value, travelRiskFactors) => [...Object.keys(travelRiskFactors || {}), 'None'].includes(value) },
-  { name: 'riskFactors', validate: (value, riskFactorWeights) => Array.isArray(value) && value.every((v) => Object.keys(riskFactorWeights || {}).includes(v)) },
+  { name: 'riskFactors', validate: (value, riskFactorWeights) => Array.isArray(value) && (value.length === 0 || value.every((v) => Object.keys(riskFactorWeights || {}).includes(v))) },
   { name: 'drugHistory', validate: (value, drugHistoryWeights) => ['None', ...Object.keys(drugHistoryWeights || {})].includes(value) },
   { name: 'submit', validate: () => true },
 ];
@@ -52,245 +52,149 @@ const ContextHandler = {
     const inputLower = input.toLowerCase().trim();
     const currentStepConfig = steps.find((step) => step.name === currentStep);
 
-    for (const [context, keywords] of Object.entries(ContextHandler.contexts)) {
-      if (keywords.some((keyword) => inputLower.includes(keyword))) {
-        switch (context) {
-          case 'greetings':
-            addBotMessage(BotMessages.getGreetingResponse(currentStep));
-            setInput('');
-            return true;
-          case 'farewells':
-            addBotMessage(BotMessages.getFarewellResponse(currentStep));
-            setInput('');
-            return true;
-          case 'gratitude':
-            addBotMessage(BotMessages.getGratitudeResponse(currentStep));
-            setInput('');
-            return true;
-          case 'apologies':
-            addBotMessage(BotMessages.getApologyResponse(currentStep));
-            setInput('');
-            return true;
-          case 'symptomDescription':
-            if (currentStep === 'symptoms') {
-              addBotMessage(BotMessages.getSymptomPrompt());
-              setInput('');
-              return true;
-            }
-            addBotMessage(BotMessages.getSymptomDescriptionResponse(currentStep));
-            setInput('');
-            return true;
-          case 'durationOfSymptoms':
-            if (currentStep === 'duration' || currentStep === 'durationUnit') {
-              addBotMessage(BotMessages.getStepPrompt(currentStep));
-              setInput('');
-              return true;
-            }
-            addBotMessage(BotMessages.getDurationResponse(currentStep));
-            setInput('');
-            return true;
-          case 'severityOfSymptoms':
-            if (currentStep === 'severity') {
-              addBotMessage(BotMessages.getStepPrompt(currentStep));
-              setInput('');
-              return true;
-            }
-            addBotMessage(BotMessages.getSeverityResponse(currentStep));
-            setInput('');
-            return true;
-          case 'locationOfSymptoms':
-            addBotMessage(BotMessages.getLocationResponse(currentStep));
-            setInput('');
-            return true;
-          case 'onset':
-            addBotMessage(BotMessages.getOnsetResponse(currentStep));
-            setInput('');
-            return true;
-          case 'triggersOrCauses':
-            addBotMessage(BotMessages.getTriggersResponse(currentStep));
-            setInput('');
-            return true;
-          case 'relievingOrWorseningFactors':
-            addBotMessage(BotMessages.getRelievingWorseningResponse(currentStep));
-            setInput('');
-            return true;
-          case 'associatedSymptoms':
-            if (currentStep === 'symptoms') {
-              addBotMessage(BotMessages.getSymptomPrompt());
-              setInput('');
-              return true;
-            }
-            addBotMessage(BotMessages.getAssociatedSymptomsResponse(currentStep));
-            setInput('');
-            return true;
-          case 'medicalHistory':
-          case 'medicationUse':
-            if (currentStep === 'drugHistory') {
-              if (inputLower === 'skip' || inputLower === 'none') {
-                handlePatientInfoChange('drugHistory', 'None');
-                setInput('');
-                return true;
-              }
-              const drugMatch = Object.keys(patientInfo.drugHistoryWeights || {}).find((drug) =>
-                inputLower.includes(drug.toLowerCase())
-              );
-              if (drugMatch && currentStepConfig.validate(drugMatch, patientInfo.drugHistoryWeights)) {
-                handlePatientInfoChange('drugHistory', drugMatch);
-                setInput('');
-                return true;
-              }
-              addBotMessage(BotMessages.getStepPrompt(currentStep));
-              setInput('');
-              return true;
-            }
-            addBotMessage(BotMessages.getMedicationUseResponse(currentStep));
-            setInput('');
-            return true;
-          case 'allergies':
-            addBotMessage(BotMessages.getAllergiesResponse(currentStep));
-            setInput('');
-            return true;
-          case 'age':
-            if (currentStep === 'age') {
-              const ageMatch = inputLower.match(/\d+/);
-              if (ageMatch && currentStepConfig.validate(parseInt(ageMatch[0], 10))) {
-                handlePatientInfoChange('age', parseInt(ageMatch[0], 10));
-                setInput('');
-                return true;
-              }
-            }
-            addBotMessage(BotMessages.getAgeResponse(currentStep));
-            setInput('');
-            return true;
-          case 'gender':
-            if (currentStep === 'gender') {
-              const genderMatch = ['male', 'female', 'other'].find((g) => inputLower.includes(g));
-              if (genderMatch && currentStepConfig.validate(genderMatch.charAt(0).toUpperCase() + genderMatch.slice(1))) {
-                handlePatientInfoChange('gender', genderMatch.charAt(0).toUpperCase() + genderMatch.slice(1));
-                setInput('');
-                return true;
-              }
-            }
-            addBotMessage(BotMessages.getGenderResponse(currentStep));
-            setInput('');
-            return true;
-          case 'pregnancyStatus':
-            addBotMessage(BotMessages.getPregnancyResponse(currentStep));
-            setInput('');
-            return true;
-          case 'lifestyleFactors':
-          case 'recentExposure':
-            if (currentStep === 'riskFactors') {
-              if (inputLower === 'skip' || inputLower === 'none') {
-                handlePatientInfoChange('riskFactors', []);
-                setInput('');
-                return true;
-              }
-              const riskMatch = Object.keys(patientInfo.riskFactorWeights || {}).find((risk) =>
-                inputLower.includes(risk.toLowerCase())
-              );
-              if (riskMatch && currentStepConfig.validate([riskMatch], patientInfo.riskFactorWeights)) {
-                const currentRiskFactors = patientInfo.riskFactors || [];
-                const updatedRiskFactors = currentRiskFactors.includes(riskMatch)
-                  ? currentRiskFactors
-                  : [...currentRiskFactors, riskMatch];
-                handlePatientInfoChange('riskFactors', updatedRiskFactors);
-                setInput('');
-                return true;
-              }
-              addBotMessage(BotMessages.getStepPrompt(currentStep));
-              setInput('');
-              return true;
-            }
-            addBotMessage(BotMessages.getLifestyleResponse(currentStep));
-            setInput('');
-            return true;
-          case 'chronicConditions':
-            addBotMessage(BotMessages.getChronicConditionsResponse(currentStep));
-            setInput('');
-            return true;
-          case 'familyMedicalHistory':
-            addBotMessage(BotMessages.getFamilyHistoryResponse(currentStep));
-            setInput('');
-            return true;
-          case 'recentTravel':
-            if (currentStep === 'travelRegion') {
-              const travelMatch = [...Object.keys(patientInfo.travelRiskFactors || {}), 'none'].find((region) =>
-                inputLower.includes(region.toLowerCase())
-              );
-              if (travelMatch && currentStepConfig.validate(travelMatch.charAt(0).toUpperCase() + travelMatch.slice(1), patientInfo.travelRiskFactors)) {
-                handlePatientInfoChange('travelRegion', travelMatch.charAt(0).toUpperCase() + travelMatch.slice(1));
-                setInput('');
-                return true;
-              }
-              addBotMessage(BotMessages.getStepPrompt(currentStep));
-              setInput('');
-              return true;
-            }
-            addBotMessage(BotMessages.getRecentTravelResponse(currentStep));
-            setInput('');
-            return true;
-          case 'vaccinationStatus':
-            addBotMessage(BotMessages.getVaccinationResponse(currentStep));
-            setInput('');
-            return true;
-          case 'mentalHealthSymptoms':
-            addBotMessage(BotMessages.getMentalHealthResponse(currentStep));
-            setInput('');
-            return true;
-          case 'requestsForAdvice':
-            addBotMessage(BotMessages.getAdviceResponse(currentStep));
-            setInput('');
-            return true;
-          case 'requestsForDiagnosis':
-            addBotMessage(BotMessages.getDiagnosisResponse(currentStep));
-            setInput('');
-            return true;
-          case 'requestsForEmergencyHelp':
-            addBotMessage(BotMessages.getEmergencyResponse(currentStep));
-            setInput('');
-            return true;
-          case 'confusionOrClarification':
-            addBotMessage(BotMessages.getClarificationResponse(currentStep));
-            setInput('');
-            return true;
-          case 'feedbackOrComplaints':
-            addBotMessage(BotMessages.getFeedbackResponse(currentStep));
-            setInput('');
-            return true;
-          default:
-            return false;
-        }
-      }
-    }
-
-    // Handle direct input for specific steps
-    if (currentStep === 'submit' && ['submit', 'done', 'finish'].includes(inputLower)) {
-      handlePatientInfoChange('submit', true);
-      setInput('');
-      return true;
-    }
-
+    // Handle direct step-specific inputs first
     if (currentStepConfig && currentStepConfig.validate) {
       let value = inputLower;
       if (currentStep === 'age' || currentStep === 'duration') {
         const numberMatch = inputLower.match(/\d+/);
         value = numberMatch ? parseInt(numberMatch[0], 10) : null;
-      } else if (['gender', 'durationUnit', 'severity', 'travelRegion'].includes(currentStep)) {
-        value = inputLower.charAt(0).toUpperCase() + inputLower.slice(1);
+      } else if (['gender', 'durationUnit', 'severity'].includes(currentStep)) {
+        value = ['male', 'female', 'other', 'days', 'weeks', 'months', 'mild', 'moderate', 'severe']
+          .find((v) => inputLower.includes(v)) || value;
+        value = value.charAt(0).toUpperCase() + value.slice(1);
+      } else if (currentStep === 'travelRegion') {
+        value = [...Object.keys(patientInfo.travelRiskFactors || {}), 'none']
+          .find((v) => inputLower.includes(v.toLowerCase())) || value;
+        value = value.charAt(0).toUpperCase() + value.slice(1);
       } else if (currentStep === 'riskFactors' && (inputLower === 'skip' || inputLower === 'none')) {
         value = [];
+      } else if (currentStep === 'riskFactors') {
+        const riskMatch = Object.keys(patientInfo.riskFactorWeights || {})
+          .find((risk) => inputLower.includes(risk.toLowerCase()));
+        if (riskMatch) {
+          const currentRiskFactors = patientInfo.riskFactors || [];
+          value = currentRiskFactors.includes(riskMatch) ? currentRiskFactors : [...currentRiskFactors, riskMatch];
+        }
       } else if (currentStep === 'drugHistory' && (inputLower === 'skip' || inputLower === 'none')) {
         value = 'None';
+      } else if (currentStep === 'drugHistory') {
+        value = Object.keys(patientInfo.drugHistoryWeights || {})
+          .find((drug) => inputLower.includes(drug.toLowerCase())) || value;
+      } else if (currentStep === 'submit' && ['submit', 'done', 'finish'].includes(inputLower)) {
+        value = true;
       }
 
       if (value !== null && currentStepConfig.validate(value, patientInfo[currentStep + 'Weights'] || patientInfo.travelRiskFactors)) {
         handlePatientInfoChange(currentStep, value);
         setInput('');
+        if (currentStep !== 'symptoms' && currentStep !== 'riskFactors') {
+          setMessages((prev) => [...prev, { role: 'bot', content: BotMessages.getStepPrompt(steps[steps.findIndex((s) => s.name === currentStep) + 1]?.name || 'submit') }]);
+        }
         return true;
       }
     }
 
+    // Handle contextual inputs
+    for (const [context, keywords] of Object.entries(ContextHandler.contexts)) {
+      if (keywords.some((keyword) => inputLower.includes(keyword))) {
+        let response;
+        switch (context) {
+          case 'greetings':
+            response = BotMessages.getGreetingResponse(currentStep);
+            break;
+          case 'farewells':
+            response = BotMessages.getFarewellResponse(currentStep);
+            break;
+          case 'gratitude':
+            response = BotMessages.getGratitudeResponse(currentStep);
+            break;
+          case 'apologies':
+            response = BotMessages.getApologyResponse(currentStep);
+            break;
+          case 'symptomDescription':
+            response = currentStep === 'symptoms' ? BotMessages.getSymptomPrompt() : BotMessages.getSymptomDescriptionResponse(currentStep);
+            break;
+          case 'durationOfSymptoms':
+            response = ['duration', 'durationUnit'].includes(currentStep) ? BotMessages.getStepPrompt(currentStep) : BotMessages.getDurationResponse(currentStep);
+            break;
+          case 'severityOfSymptoms':
+            response = currentStep === 'severity' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getSeverityResponse(currentStep);
+            break;
+          case 'locationOfSymptoms':
+            response = BotMessages.getLocationResponse(currentStep);
+            break;
+          case 'onset':
+            response = BotMessages.getOnsetResponse(currentStep);
+            break;
+          case 'triggersOrCauses':
+            response = BotMessages.getTriggersResponse(currentStep);
+            break;
+          case 'relievingOrWorseningFactors':
+            response = BotMessages.getRelievingWorseningResponse(currentStep);
+            break;
+          case 'associatedSymptoms':
+            response = currentStep === 'symptoms' ? BotMessages.getSymptomPrompt() : BotMessages.getAssociatedSymptomsResponse(currentStep);
+            break;
+          case 'medicalHistory':
+          case 'medicationUse':
+            response = currentStep === 'drugHistory' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getMedicationUseResponse(currentStep);
+            break;
+          case 'allergies':
+            response = BotMessages.getAllergiesResponse(currentStep);
+            break;
+          case 'age':
+            response = currentStep === 'age' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getAgeResponse(currentStep);
+            break;
+          case 'gender':
+            response = currentStep === 'gender' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getGenderResponse(currentStep);
+            break;
+          case 'pregnancyStatus':
+            response = BotMessages.getPregnancyResponse(currentStep);
+            break;
+          case 'lifestyleFactors':
+          case 'recentExposure':
+            response = currentStep === 'riskFactors' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getLifestyleResponse(currentStep);
+            break;
+          case 'chronicConditions':
+            response = BotMessages.getChronicConditionsResponse(currentStep);
+            break;
+          case 'familyMedicalHistory':
+            response = BotMessages.getFamilyHistoryResponse(currentStep);
+            break;
+          case 'recentTravel':
+            response = currentStep === 'travelRegion' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getRecentTravelResponse(currentStep);
+            break;
+          case 'vaccinationStatus':
+            response = BotMessages.getVaccinationResponse(currentStep);
+            break;
+          case 'mentalHealthSymptoms':
+            response = BotMessages.getMentalHealthResponse(currentStep);
+            break;
+          case 'requestsForAdvice':
+            response = BotMessages.getAdviceResponse(currentStep);
+            break;
+          case 'requestsForDiagnosis':
+            response = BotMessages.getDiagnosisResponse(currentStep);
+            break;
+          case 'requestsForEmergencyHelp':
+            response = BotMessages.getEmergencyResponse(currentStep);
+            break;
+          case 'confusionOrClarification':
+            response = BotMessages.getClarificationResponse(currentStep);
+            break;
+          case 'feedbackOrComplaints':
+            response = BotMessages.getFeedbackResponse(currentStep);
+            break;
+          default:
+            response = BotMessages.getErrorResponse(currentStep);
+        }
+        addBotMessage(response);
+        setInput('');
+        return true;
+      }
+    }
+
+    // Fallback for unrecognized input
     addBotMessage(BotMessages.getErrorResponse(currentStep));
     setInput('');
     return true;
