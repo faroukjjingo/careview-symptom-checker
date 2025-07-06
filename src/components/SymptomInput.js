@@ -4,147 +4,8 @@ import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
 import { travelRiskFactors } from './TravelRiskFactors';
 import { riskFactorWeights } from './RiskFactorWeights';
-import drugHistoryWeights from './DrugHistoryWeights';
+import { drugHistoryWeights } from './DrugHistoryWeights';
 import calculateDiagnosis from './SymptomCalculations';
-import {
-  Box,
-  TextField,
-  Select,
-  MenuItem,
-  InputLabel,
-  FormControl,
-  Chip,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Paper,
-  InputAdornment,
-  Typography,
-  Button,
-} from '@mui/material';
-import { styled } from '@mui/material/styles';
-
-const ChatContainer = styled(Box)(({ theme }) => ({
-  maxWidth: 600,
-  margin: '0 auto',
-  padding: theme.spacing(2),
-  height: '70vh',
-  display: 'flex',
-  flexDirection: 'column',
-}));
-
-const ChatMessages = styled(Box)(({ theme }) => ({
-  flexGrow: 1,
-  overflowY: 'auto',
-  padding: theme.spacing(2),
-  backgroundColor: 'hsl(var(--background))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: 'var(--radius)',
-  marginBottom: theme.spacing(2),
-}));
-
-const Message = styled(Box)(({ theme, isUser }) => ({
-  display: 'flex',
-  justifyContent: isUser ? 'flex-end' : 'flex-start',
-  marginBottom: theme.spacing(2),
-  '& > div': {
-    maxWidth: '70%',
-    padding: theme.spacing(1.5),
-    borderRadius: 'var(--radius)',
-    backgroundColor: isUser ? 'hsl(var(--primary))' : 'hsl(var(--muted))',
-    color: isUser ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))',
-  },
-}));
-
-const InputContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'flex-end',
-  gap: theme.spacing(1),
-}));
-
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  '& .MuiInputBase-root': {
-    borderRadius: 'var(--radius)',
-    backgroundColor: 'hsl(var(--background))',
-    borderColor: 'hsl(var(--border))',
-    color: 'hsl(var(--foreground))',
-  },
-  '& .MuiInputLabel-root': {
-    color: 'hsl(var(--muted-foreground))',
-  },
-  '& .MuiInputBase-root:hover': {
-    borderColor: 'hsl(var(--primary))',
-  },
-  '& .Mui-focused': {
-    borderColor: 'hsl(var(--primary))',
-  },
-}));
-
-const StyledFormControl = styled(FormControl)(({ theme }) => ({
-  minWidth: 200,
-  '& .MuiInputBase-root': {
-    borderRadius: 'var(--radius)',
-    backgroundColor: 'hsl(var(--background))',
-    borderColor: 'hsl(var(--border))',
-    color: 'hsl(var(--foreground))',
-  },
-  '& .MuiInputLabel-root': {
-    color: 'hsl(var(--muted-foreground))',
-  },
-  '& .MuiInputBase-root:hover': {
-    borderColor: 'hsl(var(--primary))',
-  },
-  '& .Mui-focused': {
-    borderColor: 'hsl(var(--primary))',
-  },
-}));
-
-const SuggestionsContainer = styled(Paper)(({ theme }) => ({
-  position: 'absolute',
-  zIndex: 1000,
-  width: '100%',
-  maxHeight: 300,
-  overflowY: 'auto',
-  borderRadius: 'var(--radius)',
-  backgroundColor: 'hsl(var(--popover))',
-  color: 'hsl(var(--popover-foreground))',
-  boxShadow: '0 4px 12px hsl(var(--muted)/0.2)',
-}));
-
-const SelectedSymptomChip = styled(Chip)(({ theme }) => ({
-  margin: theme.spacing(0.5),
-  borderRadius: 16,
-  backgroundColor: 'hsl(var(--primary))',
-  color: 'hsl(var(--primary-foreground))',
-}));
-
-const CustomSelect = ({ label, value, options, onSelect, placeholder, required, multiple }) => {
-  return (
-    <StyledFormControl required={required}>
-      <InputLabel>{label}</InputLabel>
-      <Select
-        value={value || (multiple ? [] : '')}
-        onChange={(e) => onSelect(multiple ? Array.from(e.target.value) : e.target.value)}
-        label={label}
-        displayEmpty
-        multiple={multiple}
-        renderValue={(selected) =>
-          selected.length === 0 || !selected
-            ? <em className="text-muted-foreground">{placeholder}</em>
-            : multiple
-            ? selected.join(', ')
-            : selected
-        }
-      >
-        {options.map((option) => (
-          <MenuItem key={option} value={option}>
-            {option}
-          </MenuItem>
-        ))}
-      </Select>
-    </StyledFormControl>
-  );
-};
 
 const SymptomInput = ({ onDiagnosisResults }) => {
   const [input, setInput] = useState('');
@@ -229,6 +90,18 @@ const SymptomInput = ({ onDiagnosisResults }) => {
       ];
 
       setSuggestions(combinedSuggestions);
+    } else if (['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
+      const options = {
+        gender: ['Male', 'Female', 'Other'],
+        durationUnit: ['Days', 'Weeks', 'Months'],
+        severity: ['Mild', 'Moderate', 'Severe'],
+        travelRegion: Object.keys(travelRiskFactors),
+        drugHistory: Object.keys(drugHistoryWeights),
+      }[currentStep];
+      const filteredOptions = options
+        .filter((option) => option.toLowerCase().includes(text.toLowerCase()))
+        .slice(0, 8);
+      setSuggestions(filteredOptions.map((option) => ({ type: 'single', text: option })));
     } else {
       setSuggestions([]);
     }
@@ -291,21 +164,21 @@ const SymptomInput = ({ onDiagnosisResults }) => {
       case 'age':
         return 'How old are you?';
       case 'gender':
-        return 'What is your gender?';
+        return 'What is your gender? (Type or select: Male, Female, Other)';
       case 'symptoms':
         return 'Please tell me your symptoms. Type to search, select at least two, and type "done" when ready.';
       case 'duration':
         return 'How long have you had these symptoms? Enter a number.';
       case 'durationUnit':
-        return 'What is the unit of duration (Days, Weeks, Months)?';
+        return 'What is the unit of duration? (Type or select: Days, Weeks, Months)';
       case 'severity':
-        return 'How severe are your symptoms?';
+        return 'How severe are your symptoms? (Type or select: Mild, Moderate, Severe)';
       case 'travelRegion':
-        return 'Have you recently traveled to any specific region?';
+        return 'Have you recently traveled to any specific region? (Type or select a region)';
       case 'riskFactors':
-        return 'Do you have any risk factors? Select all that apply, type "none" to skip, or use the dropdown.';
+        return 'Do you have any risk factors? Type "none" to skip, or select from the list.';
       case 'drugHistory':
-        return 'What is your drug history?';
+        return 'What is your drug history? (Type or select an option)';
       case 'submit':
         return 'Ready to get your diagnosis. Please type "submit" to confirm.';
       default:
@@ -393,7 +266,7 @@ const SymptomInput = ({ onDiagnosisResults }) => {
             handlePatientInfoChange(currentStep, matchedOption);
             setInput('');
           } else {
-            setError(`Please select a valid ${currentStep} from the dropdown or type a matching value.`);
+            setError(`Please select a valid ${currentStep} from the list or type a matching value.`);
             setMessages((prev) => [
               ...prev,
               { text: `Please select a valid ${currentStep}.`, isUser: false },
@@ -409,75 +282,96 @@ const SymptomInput = ({ onDiagnosisResults }) => {
   };
 
   return (
-    <ChatContainer>
-      <ChatMessages>
+    <div className="max-w-xl mx-auto p-4 h-[70vh] flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 bg-background border border-border rounded-[var(--radius)] mb-4">
         {messages.map((msg, index) => (
-          <Message key={index} isUser={msg.isUser}>
-            <Box>
-              <Typography variant="body2">{msg.text}</Typography>
-            </Box>
-          </Message>
+          <div
+            key={index}
+            className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'} mb-4`}
+          >
+            <div
+              className={`max-w-[70%] p-3 rounded-[var(--radius)] ${
+                msg.isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+              }`}
+            >
+              {msg.text}
+            </div>
+          </div>
         ))}
         <div ref={chatEndRef} />
-      </ChatMessages>
+      </div>
 
       {error && (
-        <Typography className="text-destructive mb-4 text-center">{error}</Typography>
+        <p className="text-destructive mb-4 text-center">{error}</p>
       )}
 
       {['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory', 'riskFactors'].includes(currentStep) && (
-        <Box sx={{ mb: 2 }}>
+        <div className="mb-4">
           {currentStep === 'gender' && (
-            <CustomSelect
-              label="Gender"
+            <select
               value={patientInfo.gender}
-              options={['Male', 'Female', 'Other']}
-              onSelect={(value) => handleSelectSubmit('gender', value)}
-              placeholder="Select gender"
+              onChange={(e) => handleSelectSubmit('gender', e.target.value)}
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
               required
-            />
+            >
+              <option value="" disabled>Select gender</option>
+              {['Male', 'Female', 'Other'].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           )}
           {currentStep === 'durationUnit' && (
-            <CustomSelect
-              label="Duration Unit"
+            <select
               value={patientInfo.durationUnit}
-              options={['Days', 'Weeks', 'Months']}
-              onSelect={(value) => handleSelectSubmit('durationUnit', value)}
-              placeholder="Select unit"
+              onChange={(e) => handleSelectSubmit('durationUnit', e.target.value)}
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
               required
-            />
+            >
+              <option value="" disabled>Select unit</option>
+              {['Days', 'Weeks', 'Months'].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           )}
           {currentStep === 'severity' && (
-            <CustomSelect
-              label="Severity"
+            <select
               value={patientInfo.severity}
-              options={['Mild', 'Moderate', 'Severe']}
-              onSelect={(value) => handleSelectSubmit('severity', value)}
-              placeholder="Select severity"
+              onChange={(e) => handleSelectSubmit('severity', e.target.value)}
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
               required
-            />
+            >
+              <option value="" disabled>Select severity</option>
+              {['Mild', 'Moderate', 'Severe'].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           )}
           {currentStep === 'travelRegion' && (
-            <CustomSelect
-              label="Travel Region"
+            <select
               value={patientInfo.travelRegion}
-              options={Object.keys(travelRiskFactors)}
-              onSelect={(value) => handleSelectSubmit('travelRegion', value)}
-              placeholder="Select travel region"
+              onChange={(e) => handleSelectSubmit('travelRegion', e.target.value)}
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
               required
-            />
+            >
+              <option value="" disabled>Select travel region</option>
+              {Object.keys(travelRiskFactors).map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           )}
           {currentStep === 'riskFactors' && (
-            <Box>
-              <CustomSelect
-                label="Risk Factors"
-                value={patientInfo.riskFactors}
-                options={Object.keys(riskFactorWeights)}
-                onSelect={(value) => handleSelectSubmit('riskFactors', value)}
-                placeholder="Select risk factors"
+            <div>
+              <select
                 multiple
-              />
-              <Button
+                value={patientInfo.riskFactors}
+                onChange={(e) => handleSelectSubmit('riskFactors', Array.from(e.target.selectedOptions, (option) => option.value))}
+                className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary h-24"
+              >
+                {Object.keys(riskFactorWeights).map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <button
                 onClick={() => {
                   setMessages((prev) => [
                     ...prev,
@@ -487,107 +381,96 @@ const SymptomInput = ({ onDiagnosisResults }) => {
                   setPatientInfo((prev) => ({ ...prev, riskFactors: [] }));
                   setCurrentStep(steps[currentStep].next);
                 }}
-                sx={{ mt: 1 }}
+                className="mt-2 p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90"
               >
                 Skip (No Risk Factors)
-              </Button>
-            </Box>
+              </button>
+            </div>
           )}
           {currentStep === 'drugHistory' && (
-            <CustomSelect
-              label="Drug History"
+            <select
               value={patientInfo.drugHistory}
-              options={Object.keys(drugHistoryWeights)}
-              onSelect={(value) => handleSelectSubmit('drugHistory', value)}
-              placeholder="Select drug history"
+              onChange={(e) => handleSelectSubmit('drugHistory', e.target.value)}
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
               required
-            />
+            >
+              <option value="" disabled>Select drug history</option>
+              {Object.keys(drugHistoryWeights).map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           )}
-        </Box>
+        </div>
       )}
 
       {currentStep === 'symptoms' && selectedSymptoms.length > 0 && (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+        <div className="flex flex-wrap gap-2 mb-4">
           {selectedSymptoms.map((symptom) => (
-            <SelectedSymptomChip
+            <div
               key={symptom}
-              label={symptom}
-              onDelete={() => removeSymptom(symptom)}
-              deleteIcon={<X size={16} className="text-primary-foreground hover:text-destructive" />}
-            />
+              className="flex items-center px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm"
+            >
+              {symptom}
+              <X
+                size={16}
+                className="ml-2 cursor-pointer hover:text-destructive"
+                onClick={() => removeSymptom(symptom)}
+              />
+            </div>
           ))}
-        </Box>
+        </div>
       )}
 
       {currentStep !== 'welcome' && (
-        <InputContainer>
-          <StyledTextField
-            fullWidth
-            label={currentStep === 'symptoms' ? 'Symptoms' : currentStep === 'submit' ? 'Confirm' : currentStep.charAt(0).toUpperCase() + currentStep.slice(1)}
-            placeholder={
-              currentStep === 'symptoms'
-                ? 'Type symptoms or "done"'
-                : currentStep === 'submit'
-                ? 'Type "submit"'
-                : currentStep === 'riskFactors'
-                ? 'Type "none" or use dropdown'
-                : `Enter ${currentStep}`
-            }
-            value={input}
-            onChange={handleInputChange}
-            onKeyPress={handleInputSubmit}
-            InputProps={{
-              endAdornment: currentStep === 'symptoms' && (
-                <InputAdornment position="end">
-                  <Plus size={16} className="text-primary" />
-                </InputAdornment>
-              ),
-            }}
-            required={currentStep !== 'riskFactors'}
-          />
-          <Button
-            variant="contained"
+        <div className="flex items-end gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={input}
+              onChange={handleInputChange}
+              onKeyPress={handleInputSubmit}
+              placeholder={
+                currentStep === 'symptoms'
+                  ? 'Type symptoms or "done"'
+                  : currentStep === 'submit'
+                  ? 'Type "submit"'
+                  : currentStep === 'riskFactors'
+                  ? 'Type "none" or select from list'
+                  : `Enter ${currentStep}`
+              }
+              className="w-full p-2 pr-10 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+              required={currentStep !== 'riskFactors'}
+            />
+            {currentStep === 'symptoms' && (
+              <Plus size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary" />
+            )}
+          </div>
+          <button
             onClick={handleInputSubmit}
-            sx={{
-              borderRadius: 'var(--radius)',
-              backgroundColor: 'hsl(var(--primary))',
-              color: 'hsl(var(--primary-foreground))',
-              '&:hover': { backgroundColor: 'hsl(var(--primary)/0.9)' },
-              minWidth: '48px',
-              padding: '8px',
-            }}
+            className="p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90"
           >
             <Send size={16} />
-          </Button>
-        </InputContainer>
+          </button>
+        </div>
       )}
 
-      {currentStep === 'symptoms' && suggestions.length > 0 && (
-        <SuggestionsContainer sx={{ mt: 1 }}>
+      {suggestions.length > 0 && (
+        <div className="absolute w-full max-h-60 overflow-y-auto bg-popover border border-border rounded-[var(--radius)] shadow-md mt-1 z-10">
           {suggestions.map((suggestion, index) => (
-            <ListItem
+            <div
               key={index}
-              button
-              onClick={() => handleSymptomSelect(suggestion)}
-              className="suggestion-highlight"
-              sx={{ '&:hover': { backgroundColor: 'hsl(var(--muted))' }, padding: 1 }}
+              className="flex items-center p-2 cursor-pointer hover:bg-muted suggestion-highlight"
+              onClick={() => (currentStep === 'symptoms' ? handleSymptomSelect(suggestion) : handlePatientInfoChange(currentStep, suggestion.text))}
             >
               {suggestion.type === 'combination' && (
-                <ListItemIcon>
-                  <Link size={16} className="text-primary" />
-                </ListItemIcon>
+                <Link size={16} className="mr-2 text-primary" />
               )}
-              <ListItemText
-                primary={suggestion.text}
-                primaryTypographyProps={{
-                  className: suggestion.type === 'combination' ? 'italic' : '',
-                }}
-              />
-            </ListItem>
+              <span className={suggestion.type === 'combination' ? 'italic' : ''}>{suggestion.text}</span>
+            </div>
           ))}
-        </SuggestionsContainer>
+        </div>
       )}
-    </ChatContainer>
+    </div>
   );
 };
 
