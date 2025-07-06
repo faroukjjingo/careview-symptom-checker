@@ -56,10 +56,10 @@ const Checker = () => {
   }, [isAnalyzing]);
 
   return (
-    <div className="min-h-screen w-full px-2 sm:px-4 py-2">
-      <div className="mb-4 text-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-primary">CareView Symptom Checker</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">Enter your symptoms to explore possible diagnoses. Always consult a healthcare professional for medical advice.</p>
+    <div className="min-h-screen w-full px-2 py-1">
+      <div className="mb-2 text-center">
+        <h1 className="text-xl font-bold text-primary">CareView Symptom Checker</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">Developed by trusted healthcare professionals to explore possible diagnoses. Always consult a doctor for medical advice.</p>
       </div>
 
       <SymptomInput 
@@ -71,21 +71,21 @@ const Checker = () => {
       />
 
       {errorMessage && (
-        <div className="mt-3 p-3 bg-destructive/10 text-destructive rounded-lg text-center">
-          <p className="font-medium">{errorMessage}</p>
-          <p className="text-sm mt-1">Please consult a healthcare provider immediately for serious symptoms.</p>
+        <div className="mt-1 p-2 bg-destructive/10 text-destructive rounded-lg text-center">
+          <p className="font-medium text-xs">{errorMessage}</p>
+          <p className="text-xs mt-0.5">Please consult a healthcare provider immediately for serious symptoms.</p>
         </div>
       )}
 
       {diagnosis.length > 0 && (
-        <div className="mt-4">
-          <h2 className="text-xl sm:text-2xl font-semibold text-primary mb-3">Possible Diagnoses</h2>
+        <div className="mt-2">
+          <h2 className="text-lg font-semibold text-primary mb-1">Possible Diagnoses</h2>
           {isAnalyzing ? (
-            <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+              <div className="w-5 h-5 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
               <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Analyzing your symptoms...</p>
-                <div className="w-full h-2 bg-background rounded-full overflow-hidden mt-2">
+                <p className="text-xs text-muted-foreground">Analyzing your symptoms...</p>
+                <div className="w-full h-1.5 bg-background rounded-full overflow-hidden mt-1">
                   <div
                     className="h-full bg-primary transition-all duration-300"
                     style={{ width: `${analysisProgress}%` }}
@@ -94,7 +94,7 @@ const Checker = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {diagnosis.map((diag, index) => (
                 <DiagnosisCard
                   key={index}
