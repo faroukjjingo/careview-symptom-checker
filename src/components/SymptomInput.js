@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, X, Send } from 'lucide-react';
+import { Plus, X, Send, Bot } from 'lucide-react';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
 import { travelRiskFactors } from './TravelRiskFactors';
@@ -13,22 +13,22 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState('welcome');
   const [messages, setMessages] = useState([
-    { text: "Hello! I'm CareView, here to help you explore possible diagnoses. Type 'start' to begin or 'help' for more info.", isUser: false },
+    { text: "Hi there! I'm CareView, your friendly symptom checker. I'm here to guide you through understanding your symptoms. Type 'start' to begin or 'help' for more info.", isUser: false },
   ]);
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
 
   const steps = {
     welcome: { next: 'age', validate: () => true, error: '' },
-    age: { next: 'gender', validate: () => patientInfo.age && !isNaN(parseInt(patientInfo.age)) && parseInt(patientInfo.age) > 0, error: 'Please enter a valid age (e.g., 25).' },
-    gender: { next: 'symptoms', validate: () => patientInfo.gender, error: 'Please select a gender.' },
-    symptoms: { next: 'duration', validate: () => selectedSymptoms.length >= 2, error: 'Please select at least two symptoms.' },
-    duration: { next: 'durationUnit', validate: () => patientInfo.duration && !isNaN(parseInt(patientInfo.duration)) && parseInt(patientInfo.duration) > 0, error: 'Please enter a valid duration (e.g., 3).' },
-    durationUnit: { next: 'severity', validate: () => patientInfo.durationUnit, error: 'Please select a duration unit.' },
-    severity: { next: 'travelRegion', validate: () => patientInfo.severity, error: 'Please select a severity.' },
-    travelRegion: { next: 'riskFactors', validate: () => patientInfo.travelRegion, error: 'Please select a travel region.' },
+    age: { next: 'gender', validate: () => patientInfo.age && !isNaN(parseInt(patientInfo.age)) && parseInt(patientInfo.age) > 0 && parseInt(patientInfo.age) <= 120, error: 'Please enter a valid age (e.g., 25, must be between 1 and 120).' },
+    gender: { next: 'symptoms', validate: () => patientInfo.gender, error: 'Please select a valid gender.' },
+    symptoms: { next: 'duration', validate: () => selectedSymptoms.length >= 2, error: 'Please select at least two symptoms to proceed.' },
+    duration: { next: 'durationUnit', validate: () => patientInfo.duration && !isNaN(parseInt(patientInfo.duration)) && parseInt(patientInfo.duration) > 0 && parseInt(patientInfo.duration) <= 1000, error: 'Please enter a valid duration (e.g., 3, must be between 1 and 1000).' },
+    durationUnit: { next: 'severity', validate: () => patientInfo.durationUnit, error: 'Please select a duration unit (Days, Weeks, or Months).' },
+    severity: { next: 'travelRegion', validate: () => patientInfo.severity, error: 'Please select a severity level.' },
+    travelRegion: { next: 'riskFactors', validate: () => patientInfo.travelRegion, error: 'Please select a travel region or "None".' },
     riskFactors: { next: 'drugHistory', validate: () => true, error: '' },
-    drugHistory: { next: 'submit', validate: () => patientInfo.drugHistory, error: 'Please select a drug history.' },
+    drugHistory: { next: 'submit', validate: () => patientInfo.drugHistory, error: 'Please select a drug history option.' },
     submit: { next: null, validate: () => true, error: '' },
   };
 
@@ -114,7 +114,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       setMessages((prev) => [
         ...prev,
         { text: `Added: ${uniqueNewSymptoms.join(', ')}`, isUser: true },
-        { text: `Got it! Any more symptoms? (Select at least two total, or type "done" to proceed)`, isUser: false },
+        { text: `Got it! Any more symptoms? (You need at least two. Type "done" when ready.)`, isUser: false },
       ]);
       setError('');
     }
@@ -129,7 +129,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
     setMessages((prev) => [
       ...prev,
       { text: `Removed: ${symptomToRemove}`, isUser: true },
-      { text: `Any more symptoms to add or remove? (Type "done" when ready)`, isUser: false },
+      { text: `Any more symptoms to add or remove? (Type "done" when ready.)`, isUser: false },
     ]);
   };
 
@@ -145,6 +145,10 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       setCurrentStep(steps[field].next);
     } else {
       setError(steps[field].error);
+      setMessages((prev) => [
+        ...prev,
+        { text: steps[field].error, isUser: false },
+      ]);
     }
     setInput('');
     setSuggestions([]);
@@ -153,25 +157,25 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   const getNextPrompt = (step) => {
     switch (step) {
       case 'age':
-        return 'How old are you? (Enter a number)';
+        return "Let's start with your age. How old are you? (Enter a number between 1 and 120)";
       case 'gender':
-        return 'What is your gender? (Select or type: Male, Female, Other)';
+        return "What is your gender? Please select or type: Male, Female, or Other.";
       case 'symptoms':
-        return 'Please tell me your symptoms. Type to search, select at least two, and type "done" when ready.';
+        return "Now, tell me about your symptoms. Type to search and select at least two. When you're done, type 'done'.";
       case 'duration':
-        return 'How long have you had these symptoms? (Enter a number)';
+        return "How long have you been experiencing these symptoms? (Enter a number, e.g., 3)";
       case 'durationUnit':
-        return 'What is the unit of duration? (Select or type: Days, Weeks, Months)';
+        return "Is that in Days, Weeks, or Months? Please select or type one.";
       case 'severity':
-        return 'How severe are your symptoms? (Select or type: Mild, Moderate, Severe)';
+        return "How severe are your symptoms? Please select or type: Mild, Moderate, or Severe.";
       case 'travelRegion':
-        return 'Have you recently traveled to any specific region? (Select or type a region, or "None")';
+        return "Have you traveled recently? Select a region or 'None' if you haven't.";
       case 'riskFactors':
-        return 'Do you have any risk factors? (Select multiple, type "none" to skip)';
+        return "Any risk factors to note? Select any that apply or type 'none' to skip.";
       case 'drugHistory':
-        return 'What is your drug history? (Select or type an option)';
+        return "What about your medication history? Please select or type an option.";
       case 'submit':
-        return 'All set! Calculating your diagnosis...';
+        return "All set! I'm analyzing your information now...";
       default:
         return '';
     }
@@ -192,7 +196,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
     onDiagnosisResults(result);
     setMessages((prev) => [
       ...prev,
-      { text: 'Diagnosis results are ready! Scroll down to view them.', isUser: false },
+      { text: "I've got your results! Scroll down to see the possible diagnoses.", isUser: false },
     ]);
   };
 
@@ -217,12 +221,12 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         } else if (inputLower === 'help') {
           setMessages((prev) => [
             ...prev,
-            { text: 'CareView guides you through entering symptoms and health details to explore possible diagnoses. Type "start" to begin, use the dropdowns to select options, or type your answers. You can also type "done" for symptoms or "none" for optional fields.', isUser: false },
+            { text: "I'm CareView, here to help you understand your symptoms. I'll guide you step-by-step to enter your details. Type 'start' to begin, use the dropdowns to select options, or type your answers. You can type 'done' for symptoms or 'none' for optional fields like risk factors or travel.", isUser: false },
           ]);
         } else {
           setMessages((prev) => [
             ...prev,
-            { text: 'Please type "start" to begin or "help" for more info.', isUser: false },
+            { text: "Hmm, please type 'start' to begin or 'help' for more info.", isUser: false },
           ]);
         }
         setInput('');
@@ -232,7 +236,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             setError('Please select at least two symptoms.');
             setMessages((prev) => [
               ...prev,
-              { text: 'Please select at least two symptoms before proceeding.', isUser: false },
+              { text: 'You need at least two symptoms to proceed. Please add more or select from the list.', isUser: false },
             ]);
           } else {
             setMessages((prev) => [
@@ -245,10 +249,10 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         } else if (suggestions.length > 0) {
           handleSymptomSelect(suggestions[0]);
         } else {
-          setError('Please select a symptom from the list.');
+          setError('Please select a valid symptom from the list.');
           setMessages((prev) => [
             ...prev,
-            { text: 'Please select a symptom from the list.', isUser: false },
+            { text: 'That symptom isn’t in our list. Please select one from the suggestions.', isUser: false },
           ]);
           setInput('');
         }
@@ -257,7 +261,8 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       } else if (currentStep === 'travelRegion' && inputLower === 'none') {
         handlePatientInfoChange('travelRegion', 'None');
       } else if (['age', 'duration'].includes(currentStep)) {
-        if (input && !isNaN(parseInt(input)) && parseInt(input) > 0) {
+        const num = parseInt(input);
+        if (input && !isNaN(num) && num > 0 && (currentStep === 'age' ? num <= 120 : num <= 1000)) {
           handlePatientInfoChange(currentStep, input);
         } else {
           setError(steps[currentStep].error);
@@ -283,10 +288,10 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         } else if (suggestions.length > 0) {
           handlePatientInfoChange(currentStep, suggestions[0].text);
         } else {
-          setError(`Please select a valid ${currentStep} from the list or type a matching value.`);
+          setError(`Please select a valid ${currentStep} from the suggestions or type a matching value.`);
           setMessages((prev) => [
             ...prev,
-            { text: `Please select a valid ${currentStep}.`, isUser: false },
+            { text: `That’s not a valid ${currentStep}. Please select from the suggestions or type a matching value.`, isUser: false },
           ]);
           setInput('');
         }
@@ -299,7 +304,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4 h-[70vh] flex flex-col">
+    <div className="max-w-xl mx-auto p-4 h-[70vh] flex flex-col bg-card rounded-lg shadow-md">
       <div className="flex-1 overflow-y-auto p-4 bg-background border border-border rounded-[var(--radius)] mb-4">
         {messages.map((msg, index) => (
           <div
@@ -307,11 +312,12 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'} mb-4`}
           >
             <div
-              className={`max-w-[70%] p-3 rounded-[var(--radius)] ${
+              className={`flex items-start gap-2 max-w-[80%] p-3 rounded-lg ${
                 msg.isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
               }`}
             >
-              {msg.text}
+              {!msg.isUser && <Bot size={20} className="mt-1" />}
+              <span>{msg.text}</span>
             </div>
           </div>
         ))}
@@ -319,7 +325,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       </div>
 
       {error && (
-        <p className="text-destructive mb-4 text-center">{error}</p>
+        <p className="text-destructive mb-4 text-center text-sm">{error}</p>
       )}
 
       {['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory', 'riskFactors'].includes(currentStep) && (
@@ -328,7 +334,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <select
               value={patientInfo.gender}
               onChange={(e) => handleSelectSubmit('gender', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select gender</option>
               {['Male', 'Female', 'Other'].map((option) => (
@@ -340,7 +346,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <select
               value={patientInfo.durationUnit}
               onChange={(e) => handleSelectSubmit('durationUnit', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select unit</option>
               {['Days', 'Weeks', 'Months'].map((option) => (
@@ -352,7 +358,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <select
               value={patientInfo.severity}
               onChange={(e) => handleSelectSubmit('severity', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select severity</option>
               {['Mild', 'Moderate', 'Severe'].map((option) => (
@@ -364,7 +370,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <select
               value={patientInfo.travelRegion}
               onChange={(e) => handleSelectSubmit('travelRegion', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select travel region</option>
               {[...Object.keys(travelRiskFactors), 'None'].map((option) => (
@@ -378,7 +384,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
                 multiple
                 value={patientInfo.riskFactors}
                 onChange={(e) => handleSelectSubmit('riskFactors', Array.from(e.target.selectedOptions, (option) => option.value))}
-                className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary h-24"
+                className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 h-24 transition-all"
               >
                 {Object.keys(riskFactorWeights).map((option) => (
                   <option key={option} value={option}>{option}</option>
@@ -386,7 +392,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
               </select>
               <button
                 onClick={() => handlePatientInfoChange('riskFactors', [])}
-                className="mt-2 p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90 w-full"
+                className="mt-2 p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90 w-full transition-all"
               >
                 Skip (No Risk Factors)
               </button>
@@ -396,7 +402,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <select
               value={patientInfo.drugHistory}
               onChange={(e) => handleSelectSubmit('drugHistory', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select drug history</option>
               {Object.keys(drugHistoryWeights).map((option) => (
@@ -417,7 +423,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
               {symptom}
               <X
                 size={16}
-                className="ml-2 cursor-pointer hover:text-destructive"
+                className="ml-2 cursor-pointer hover:text-destructive transition-colors"
                 onClick={() => removeSymptom(symptom)}
               />
             </div>
@@ -445,7 +451,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
                   ? 'Type "start" or "help"'
                   : `Enter ${currentStep}`
               }
-              className="w-full p-2 pr-10 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full p-2 pr-10 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
               disabled={currentStep === 'submit'}
             />
             {currentStep === 'symptoms' && (
@@ -454,8 +460,8 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           </div>
           <button
             onClick={handleInputSubmit}
-            className="p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90 disabled:opacity-50"
-            disabled={currentStep === 'submit' || !input.trim()}
+            className="p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90 disabled:opacity-50 transition-all"
+            disabled={currentstep === 'submit' || !input.trim()}
           >
             <Send size={16} />
           </button>
@@ -463,14 +469,14 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       )}
 
       {suggestions.length > 0 && (
-        <div className="absolute w-full max-w-xl max-h-60 overflow-y-auto bg-popover border border-border rounded-[var(--radius)] shadow-md mt-1 z-10">
+        <div className="absolute w-full max-w-xl max-h-60 overflow-y-auto bg-popover border border-border rounded-[var(--radius)] shadow-lg mt-1 z-10">
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
-              className="flex items-center p-2 cursor-pointer hover:bg-muted"
+              className="flex items-center p-2 cursor-pointer hover:bg-muted transition-colors"
               onClick={() => (currentStep === 'symptoms' ? handleSymptomSelect(suggestion) : handlePatientInfoChange(currentStep, suggestion.text))}
             >
-              <span className={suggestion.type === 'combination' ? 'italic' : ''}>{suggestion.text}</span>
+              <span className={suggestion.type === 'combination' ? 'italic text-muted-foreground' : 'text-foreground'}>{suggestion.text}</span>
             </div>
           ))}
         </div>
