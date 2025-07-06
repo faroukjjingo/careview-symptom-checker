@@ -1858,7 +1858,132 @@ welcomeMessages: [
       "Got all the details! Analyzing your information now...",
       "Everything's complete! Processing your symptoms now...",
     ],
+  greetingResponses: {
+    welcome: [
+      'Hi! Nice to see you! Type "start" to begin or "help" for more info.',
+      'Hello! Great to hear from you. Type "start" to proceed or "help" for guidance.',
+    ],
+    default: [
+      'Hey there! Let’s keep going. {stepPrompt}',
+      'Hi! Thanks for the greeting. {stepPrompt}',
+    ],
   },
+  farewellResponses: [
+    'Goodbye! If you want to continue, {stepPrompt}',
+    'See you later! Let’s get back to it: {stepPrompt}',
+  ],
+  gratitudeResponses: [
+    'You’re welcome! Now, {stepPrompt}',
+    'Thanks for the thanks! Let’s continue: {stepPrompt}',
+  ],
+  apologyResponses: [
+    'No worries at all! Let’s move on: {stepPrompt}',
+    'All good! Please continue with {stepPrompt}',
+  ],
+  symptomDescriptionResponses: [
+    'I hear you’re not feeling well. Let’s focus on: {stepPrompt}',
+    'Sorry you’re feeling sick. Please provide: {stepPrompt}',
+  ],
+  durationResponses: [
+    'Thanks for the info. For now, please provide: {stepPrompt}',
+    'Got it. Let’s continue with: {stepPrompt}',
+  ],
+  severityResponses: [
+    'That sounds tough. Please focus on: {stepPrompt}',
+    'I understand. Let’s proceed with: {stepPrompt}',
+  ],
+  locationResponses: [
+    'Noted. Please provide the current info needed: {stepPrompt}',
+    'Thanks for sharing. Let’s continue with: {stepPrompt}',
+  ],
+  onsetResponses: [
+    'Good to know. Please provide: {stepPrompt}',
+    'Thanks for the detail. Now, {stepPrompt}',
+  ],
+  triggersResponses: [
+    'That’s helpful. Let’s focus on: {stepPrompt}',
+    'Noted. Please continue with: {stepPrompt}',
+  ],
+  relievingWorseningResponses: [
+    'Thanks for sharing. Please provide: {stepPrompt}',
+    'Got it. Let’s move on to: {stepPrompt}',
+  ],
+  associatedSymptomsResponses: [
+    'Additional symptoms noted. Please focus on: {stepPrompt}',
+    'Thanks for the info. Let’s continue with: {stepPrompt}',
+  ],
+  medicalHistoryResponses: [
+    'Thanks for mentioning. Please provide: {stepPrompt}',
+    'Noted. Let’s proceed with: {stepPrompt}',
+  ],
+  medicationUseResponses: [
+    'Good to know. Please focus on: {stepPrompt}',
+    'Thanks for sharing. Let’s continue with: {stepPrompt}',
+  ],
+  allergiesResponses: [
+    'Noted. Please provide the current info needed: {stepPrompt}',
+    'Thanks for the info. Let’s move on to: {stepPrompt}',
+  ],
+  ageResponses: [
+    'Thanks for sharing. Please provide: {stepPrompt}',
+    'Got it. Let’s continue with: {stepPrompt}',
+  ],
+  genderResponses: [
+    'Noted. Please select your gender: {stepPrompt}',
+    'Thanks for the info. Let’s focus on: {stepPrompt}',
+  ],
+  pregnancyResponses: [
+    'That’s important to know. Please provide: {stepPrompt}',
+    'Thanks for sharing. Let’s continue with: {stepPrompt}',
+  ],
+  lifestyleResponses: [
+    'Good to know. Please focus on: {stepPrompt}',
+    'Thanks for the detail. Let’s proceed with: {stepPrompt}',
+  ],
+  chronicConditionsResponses: [
+    'Noted. Please provide: {stepPrompt}',
+    'Thanks for sharing. Let’s continue with: {stepPrompt}',
+  ],
+  familyHistoryResponses: [
+    'Thanks for the info. Please focus on: {stepPrompt}',
+    'Noted. Let’s move on to: {stepPrompt}',
+  ],
+  recentTravelResponses: [
+    'Good to know. Please provide: {stepPrompt}',
+    'Thanks for sharing. Let’s continue with: {stepPrompt}',
+  ],
+  recentExposureResponses: [
+    'Noted. Please focus on: {stepPrompt}',
+    'Thanks for the detail. Let’s proceed with: {stepPrompt}',
+  ],
+  vaccinationResponses: [
+    'Thanks for sharing. Please provide: {stepPrompt}',
+    'Noted. Let’s continue with: {stepPrompt}',
+  ],
+  mentalHealthResponses: [
+    'I’m here to help. Please focus on: {stepPrompt}',
+    'Thanks for sharing. Let’s proceed with: {stepPrompt}',
+  ],
+  adviceResponses: [
+    'I’ll provide guidance as we go. Please continue with: {stepPrompt}',
+    'Let’s get the details first. Please provide: {stepPrompt}',
+  ],
+  diagnosisResponses: [
+    'We’ll analyze everything soon. For now, please provide: {stepPrompt}',
+    'I’ll help with that at the end. Please focus on: {stepPrompt}',
+  ],
+  emergencyResponses: [
+    'If it’s urgent, please call emergency services. Otherwise, let’s continue: {stepPrompt}',
+    'Please seek immediate help if it’s serious. For now, {stepPrompt}',
+  ],
+  clarificationResponses: [
+    'Let me clarify: {stepPrompt}',
+    'No problem, here’s what I need: {stepPrompt}',
+  ],
+  feedbackResponses: [
+    'Thanks for the feedback. Let’s keep going with: {stepPrompt}',
+    'I appreciate your input. Please continue with: {stepPrompt}',
+  ],
 
   getWelcomeMessage: () => {
     return BotMessages.welcomeMessages[Math.floor(Math.random() * BotMessages.welcomeMessages.length)];
@@ -1880,6 +2005,159 @@ welcomeMessages: [
     const prompts = BotMessages.stepPrompts[step] || [''];
     return prompts[Math.floor(Math.random() * prompts.length)];
   },
+
+  getGreetingResponse: (step) => {
+    const responses = step === 'welcome' ? BotMessages.greetingResponses.welcome : BotMessages.greetingResponses.default;
+    let response = responses[Math.floor(Math.random() * responses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getFarewellResponse: (step) => {
+    let response = BotMessages.farewellResponses[Math.floor(Math.random() * BotMessages.farewellResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getGratitudeResponse: (step) => {
+    let response = BotMessages.gratitudeResponses[Math.floor(Math.random() * BotMessages.gratitudeResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getApologyResponse: (step) => {
+    let response = BotMessages.apologyResponses[Math.floor(Math.random() * BotMessages.apologyResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getSymptomDescriptionResponse: (step) => {
+    let response = BotMessages.symptomDescriptionResponses[Math.floor(Math.random() * BotMessages.symptomDescriptionResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getDurationResponse: (step) => {
+    let response = BotMessages.durationResponses[Math.floor(Math.random() * BotMessages.durationResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getSeverityResponse: (step) => {
+    let response = BotMessages.severityResponses[Math.floor(Math.random() * BotMessages.severityResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getLocationResponse: (step) => {
+    let response = BotMessages.locationResponses[Math.floor(Math.random() * BotMessages.locationResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getOnsetResponse: (step) => {
+    let response = BotMessages.onsetResponses[Math.floor(Math.random() * BotMessages.onsetResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getTriggersResponse: (step) => {
+    let response = BotMessages.triggersResponses[Math.floor(Math.random() * BotMessages.triggersResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getRelievingWorseningResponse: (step) => {
+    let response = BotMessages.relievingWorseningResponses[Math.floor(Math.random() * BotMessages.relievingWorseningResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getAssociatedSymptomsResponse: (step) => {
+    let response = BotMessages.associatedSymptomsResponses[Math.floor(Math.random() * BotMessages.associatedSymptomsResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getMedicalHistoryResponse: (step) => {
+    let response = BotMessages.medicalHistoryResponses[Math.floor(Math.random() * BotMessages.medicalHistoryResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getMedicationUseResponse: (step) => {
+    let response = BotMessages.medicationUseResponses[Math.floor(Math.random() * BotMessages.medicationUseResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getAllergiesResponse: (step) => {
+    let response = BotMessages.allergiesResponses[Math.floor(Math.random() * BotMessages.allergiesResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getAgeResponse: (step) => {
+    let response = BotMessages.ageResponses[Math.floor(Math.random() * BotMessages.ageResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getGenderResponse: (step) => {
+    let response = BotMessages.genderResponses[Math.floor(Math.random() * BotMessages.genderResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getPregnancyResponse: (step) => {
+    let response = BotMessages.pregnancyResponses[Math.floor(Math.random() * BotMessages.pregnancyResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getLifestyleResponse: (step) => {
+    let response = BotMessages.lifestyleResponses[Math.floor(Math.random() * BotMessages.lifestyleResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getChronicConditionsResponse: (step) => {
+    let response = BotMessages.chronicConditionsResponses[Math.floor(Math.random() * BotMessages.chronicConditionsResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getFamilyHistoryResponse: (step) => {
+    let response = BotMessages.familyHistoryResponses[Math.floor(Math.random() * BotMessages.familyHistoryResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getRecentTravelResponse: (step) => {
+    let response = BotMessages.recentTravelResponses[Math.floor(Math.random() * BotMessages.recentTravelResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getRecentExposureResponse: (step) => {
+    let response = BotMessages.recentExposureResponses[Math.floor(Math.random() * BotMessages.recentExposureResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getVaccinationResponse: (step) => {
+    let response = BotMessages.vaccinationResponses[Math.floor(Math.random() * BotMessages.vaccinationResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getMentalHealthResponse: (step) => {
+    let response = BotMessages.mentalHealthResponses[Math.floor(Math.random() * BotMessages.mentalHealthResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getAdviceResponse: (step) => {
+    let response = BotMessages.adviceResponses[Math.floor(Math.random() * BotMessages.adviceResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getDiagnosisResponse: (step) => {
+    let response = BotMessages.diagnosisResponses[Math.floor(Math.random() * BotMessages.diagnosisResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getEmergencyResponse: (step) => {
+    let response = BotMessages.emergencyResponses[Math.floor(Math.random() * BotMessages.emergencyResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getClarificationResponse: (step) => {
+    let response = BotMessages.clarificationResponses[Math.floor(Math.random() * BotMessages.clarificationResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
+
+  getFeedbackResponse: (step) => {
+    let response = BotMessages.feedbackResponses[Math.floor(Math.random() * BotMessages.feedbackResponses.length)];
+    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  },
 };
 
 export default BotMessages;
+  
+  
