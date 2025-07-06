@@ -276,7 +276,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4 h-[70vh] flex flex-col">
+    <div className="max-w-xl mx-auto p-0 h-[70vh] flex flex-col">
       <div className="flex-1 overflow-y-auto p-4 bg-background border border-border rounded-[var(--radius)] mb-4">
         {messages.map((msg, index) => (
           <div
