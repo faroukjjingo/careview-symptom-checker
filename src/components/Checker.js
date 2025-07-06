@@ -4,6 +4,9 @@ import SymptomInput from './SymptomInput';
 import DiagnosisCard from './DiagnosisCard';
 import calculateDiagnosis from './SymptomCalculations';
 import { guidance } from './guidance';
+import { travelRiskFactors } from './TravelRiskFactors';
+import { riskFactorWeights } from './RiskFactorWeights';
+import drugHistoryWeights from './DrugHistoryWeights';
 
 const Checker = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
@@ -16,6 +19,9 @@ const Checker = () => {
     travelRegion: '',
     riskFactors: [],
     drugHistory: '',
+    travelRiskFactors,
+    riskFactorWeights,
+    drugHistoryWeights,
   });
   const [diagnosis, setDiagnosis] = useState([]);
   const [errorMessage, setError] = useState('');
@@ -34,8 +40,8 @@ const Checker = () => {
       setIsAnalyzing(false);
       return;
     }
-    setDiagnosis(result.detailed);
-    simulateAnalysis(result.detailed);
+    setDiagnosis(result.detailed || []);
+    simulateAnalysis(result.detailed || []);
   };
 
   const simulateAnalysis = (result) => {
@@ -59,7 +65,7 @@ const Checker = () => {
       const timer = setTimeout(() => {
         setDisplayedDiagnosis((prev) => [...prev, diagnosis[typingIndex]]);
         setTypingIndex((prev) => prev + 1);
-      }, 500); // Delay for typewriter effect
+      }, 500);
       return () => clearTimeout(timer);
     } else if (typingIndex >= diagnosis.length) {
       setIsTyping(false);
@@ -80,12 +86,15 @@ const Checker = () => {
         <p className="text-sm text-muted-foreground mt-2">Developed by trusted healthcare professionals to explore possible diagnoses. Always consult a doctor for medical advice.</p>
       </div>
 
-      <SymptomInput 
+      <SymptomInput
         selectedSymptoms={selectedSymptoms}
         setSelectedSymptoms={setSelectedSymptoms}
         patientInfo={patientInfo}
         setPatientInfo={setPatientInfo}
         onDiagnosisResults={handleDiagnosisResults}
+        travelRiskFactors={travelRiskFactors}
+        riskFactorWeights={riskFactorWeights}
+        drugHistoryWeights={drugHistoryWeights}
       />
 
       {errorMessage && (
