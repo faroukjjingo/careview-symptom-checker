@@ -15,7 +15,7 @@ const PatientInfoSelector = ({
         <select
           value={patientInfo.gender}
           onChange={(e) => handlePatientInfoChange('gender', e.target.value)}
-          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
         >
           <option value="" disabled>
             Select gender
@@ -31,7 +31,7 @@ const PatientInfoSelector = ({
         <select
           value={patientInfo.durationUnit}
           onChange={(e) => handlePatientInfoChange('durationUnit', e.target.value)}
-          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
         >
           <option value="" disabled>
             Select unit
@@ -47,7 +47,7 @@ const PatientInfoSelector = ({
         <select
           value={patientInfo.severity}
           onChange={(e) => handlePatientInfoChange('severity', e.target.value)}
-          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
         >
           <option value="" disabled>
             Select severity
@@ -63,7 +63,7 @@ const PatientInfoSelector = ({
         <select
           value={patientInfo.travelRegion}
           onChange={(e) => handlePatientInfoChange('travelRegion', e.target.value)}
-          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
         >
           <option value="" disabled>
             Select travel region
@@ -83,7 +83,7 @@ const PatientInfoSelector = ({
             onChange={(e) =>
               handlePatientInfoChange('riskFactors', Array.from(e.target.selectedOptions, (option) => option.value))
             }
-            className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 h-24 transition-all text-sm"
+            className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 h-24 transition-all text-base"
           >
             {Object.keys(riskFactorWeights).map((option) => (
               <option key={option} value={option}>
@@ -93,7 +93,7 @@ const PatientInfoSelector = ({
           </select>
           <button
             onClick={() => handlePatientInfoChange('riskFactors', [])}
-            className="mt-2 p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 w-full transition-all text-sm"
+            className="mt-2 p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 w-full transition-all text-base"
           >
             Skip (No Risk Factors)
           </button>
@@ -103,7 +103,7 @@ const PatientInfoSelector = ({
         <select
           value={patientInfo.drugHistory}
           onChange={(e) => handlePatientInfoChange('drugHistory', e.target.value)}
-          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
         >
           <option value="" disabled>
             Select drug history
