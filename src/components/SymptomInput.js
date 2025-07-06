@@ -1,11 +1,145 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, X, Link } from 'lucide-react';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
 import { travelRiskFactors } from './TravelRiskFactors';
 import { riskFactorWeights } from './RiskFactorWeights';
-import drugHistoryWeights from './DrugHistoryWeights';
+import { drugHistoryWeights } from './DrugHistoryWeights';
 import calculateDiagnosis from './SymptomCalculations';
+import {
+  Box,
+  TextField,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Chip,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Paper,
+  InputAdornment,
+  Typography,
+  Button,
+  Avatar,
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+
+const ChatContainer = styled(Box)(({ theme }) => ({
+  maxWidth: 600,
+  margin: '0 auto',
+  padding: theme.spacing(2),
+  height: '70vh',
+  display: 'flex',
+  flexDirection: 'column',
+}));
+
+const ChatMessages = styled(Box)(({ theme }) => ({
+  flexGrow: 1,
+  overflowY: 'auto',
+  padding: theme.spacing(2),
+  backgroundColor: 'hsl(var(--background))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: 'var(--radius)',
+  marginBottom: theme.spacing(2),
+}));
+
+const Message = styled(Box)(({ theme, isUser }) => ({
+  display: 'flex',
+  justifyContent: isUser ? 'flex-end' : 'flex-start',
+  marginBottom: theme.spacing(2),
+  '& > div': {
+    maxWidth: '70%',
+    padding: theme.spacing(1.5),
+    borderRadius: 'var(--radius)',
+    backgroundColor: isUser ? 'hsl(var(--primary))' : 'hsl(var(--muted))',
+    color: isUser ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))',
+  },
+}));
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiInputBase-root': {
+    borderRadius: 'var(--radius)',
+    backgroundColor: 'hsl(var(--background))',
+    borderColor: 'hsl(var(--border))',
+    color: 'hsl(var(--foreground))',
+  },
+  '& .MuiInputLabel-root': {
+    color: 'hsl(var(--muted-foreground))',
+  },
+  '& .MuiInputBase-root:hover': {
+    borderColor: 'hsl(var(--primary))',
+  },
+  '& .Mui-focused': {
+    borderColor: 'hsl(var(--primary))',
+  },
+}));
+
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  minWidth: 200,
+  '& .MuiInputBase-root': {
+    borderRadius: 'var(--radius)',
+    backgroundColor: 'hsl(var(--background))',
+    borderColor: 'hsl(var(--border))',
+    color: 'hsl(var(--foreground))',
+  },
+  '& .MuiInputLabel-root': {
+    color: 'hsl(var(--muted-foreground))',
+  },
+  '& .MuiInputBase-root:hover': {
+    borderColor: 'hsl(var(--primary))',
+  },
+  '& .Mui-focused': {
+    borderColor: 'hsl(var(--primary))',
+  },
+}));
+
+const SuggestionsContainer = styled(Paper)(({ theme }) => ({
+  position: 'absolute',
+  zIndex: 1000,
+  width: '100%',
+  maxHeight: 300,
+  overflowY: 'auto',
+  borderRadius: 'var(--radius)',
+  backgroundColor: 'hsl(var(--popover))',
+  color: 'hsl(var(--popover-foreground))',
+  boxShadow: '0 4px 12px hsl(var(--muted)/0.2)',
+}));
+
+const SelectedSymptomChip = styled(Chip)(({ theme }) => ({
+  margin: theme.spacing(0.5),
+  borderRadius: 16,
+  backgroundColor: 'hsl(var(--primary))',
+  color: 'hsl(var(--primary-foreground))',
+}));
+
+const CustomSelect = ({ label, value, options, onSelect, placeholder, required, multiple }) => {
+  return (
+    <StyledFormControl required={required}>
+      <InputLabel>{label}</InputLabel>
+      <Select
+        value={value || (multiple ? [] : '')}
+        onChange={(e) => onSelect(multiple ? Array.from(e.target.value) : e.target.value)}
+        label={label}
+        displayEmpty
+        multiple={multiple}
+        renderValue={(selected) =>
+          selected.length === 0 || !selected
+            ? <em className="text-muted-foreground">{placeholder}</em>
+            : multiple
+            ? selected.join(', ')
+            : selected
+        }
+      >
+        {options.map((option) => (
+          <MenuItem key={option} value={option}>
+            {option}
+          </MenuItem>
+        ))}
+      </Select>
+    </StyledFormControl>
+  );
+};
 
 const SymptomInput = ({ onDiagnosisResults }) => {
   const [input, setInput] = useState('');
@@ -22,6 +156,29 @@ const SymptomInput = ({ onDiagnosisResults }) => {
     drugHistory: '',
   });
   const [error, setError] = useState('');
+  const [currentStep, setCurrentStep] = useState('welcome');
+  const [messages, setMessages] = useState([
+    { text: "Hello! I'm here to help you explore possible diagnoses. Let's start with your age. How old are you?", isUser: false },
+  ]);
+  const chatEndRef = useRef(null);
+
+  const steps = {
+    welcome: { next: 'age' },
+    age: { next: 'gender', validate: () => patientInfo.age && !isNaN(parseInt(patientInfo.age)), error: 'Please enter a valid age.' },
+    gender: { next: 'symptoms', validate: () => patientInfo.gender, error: 'Please select a gender.' },
+    symptoms: { next: 'duration', validate: () => selectedSymptoms.length >= 2, error: 'Please select at least two symptoms.' },
+    duration: { next: 'durationUnit', validate: () => patientInfo.duration && !isNaN(parseInt(patientInfo.duration)), error: 'Please enter a valid duration.' },
+    durationUnit: { next: 'severity', validate: () => patientInfo.durationUnit, error: 'Please select a duration unit.' },
+    severity: { next: 'travelRegion', validate: () => patientInfo.severity, error: 'Please select a severity.' },
+    travelRegion: { next: 'riskFactors', validate: () => patientInfo.travelRegion, error: 'Please select a travel region.' },
+    riskFactors: { next: 'drugHistory', validate: () => true, error: '' },
+    drugHistory: { next: 'submit', validate: () => patientInfo.drugHistory, error: 'Please select a drug history.' },
+    submit: { next: null },
+  };
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleInputChange = (e) => {
     const text = e.target.value;
@@ -32,10 +189,7 @@ const SymptomInput = ({ onDiagnosisResults }) => {
       return;
     }
 
-    const availableSymptoms = Array.isArray(symptomList)
-      ? symptomList
-      : Object.keys(symptomList);
-
+    const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
     const filteredSymptoms = availableSymptoms
       .filter(
         (symptom) =>
@@ -78,6 +232,11 @@ const SymptomInput = ({ onDiagnosisResults }) => {
     if (uniqueNewSymptoms.length > 0) {
       const updatedSymptoms = [...selectedSymptoms, ...uniqueNewSymptoms];
       setSelectedSymptoms(updatedSymptoms);
+      setMessages((prev) => [
+        ...prev,
+        { text: `Added: ${uniqueNewSymptoms.join(', ')}`, isUser: true },
+        { text: `Got it! Any more symptoms? (Select at least two total, or type "done" to proceed)`, isUser: false },
+      ]);
       setError('');
     }
 
@@ -88,47 +247,64 @@ const SymptomInput = ({ onDiagnosisResults }) => {
   const removeSymptom = (symptomToRemove) => {
     const updatedSymptoms = selectedSymptoms.filter((s) => s !== symptomToRemove);
     setSelectedSymptoms(updatedSymptoms);
+    setMessages((prev) => [
+      ...prev,
+      { text: `Removed: ${symptomToRemove}`, isUser: true },
+      { text: `Any more symptoms to add or remove? (Type "done" when ready)`, isUser: false },
+    ]);
   };
 
   const handlePatientInfoChange = (field, value) => {
     setPatientInfo((prev) => ({ ...prev, [field]: value }));
     setError('');
+    if (field === 'riskFactors') {
+      setMessages((prev) => [
+        ...prev,
+        { text: value.length > 0 ? `Selected: ${value.join(', ')}` : 'No risk factors selected', isUser: true },
+        { text: steps[currentStep].next === 'drugHistory' ? 'What is your drug history?' : 'Proceeding...', isUser: false },
+      ]);
+    } else {
+      setMessages((prev) => [
+        ...prev,
+        { text: `${field.charAt(0).toUpperCase() + field.slice(1)}: ${value}`, isUser: true },
+        { text: getNextPrompt(steps[currentStep].next), isUser: false },
+      ]);
+    }
+    if (steps[currentStep].validate()) {
+      setCurrentStep(steps[currentStep].next);
+    } else {
+      setError(steps[currentStep].error);
+    }
+  };
+
+  const getNextPrompt = (step) => {
+    switch (step) {
+      case 'age':
+        return 'How old are you?';
+      case 'gender':
+        return 'What is your gender?';
+      case 'symptoms':
+        return 'Please tell me your symptoms. Type to search, select at least two, and type "done" when ready.';
+      case 'duration':
+        return 'How long have you had these symptoms? Enter a number.';
+      case 'durationUnit':
+        return 'What is the unit of duration (Days, Weeks, Months)?';
+      case 'severity':
+        return 'How severe are your symptoms?';
+      case 'travelRegion':
+        return 'Have you recently traveled to any specific region?';
+      case 'riskFactors':
+        return 'Do you have any risk factors? Select all that apply, or type "none" to skip.';
+      case 'drugHistory':
+        return 'What is your drug history?';
+      case 'submit':
+        return 'Ready to get your diagnosis. Please confirm by typing "submit".';
+      default:
+        return '';
+    }
   };
 
   const handleSubmit = async () => {
-    if (!patientInfo.age || isNaN(parseInt(patientInfo.age))) {
-      setError('Age is required and must be a valid number');
-      return;
-    }
-    if (!patientInfo.gender) {
-      setError('Gender is required');
-      return;
-    }
-    if (selectedSymptoms.length < 2) {
-      setError('At least two symptoms are required');
-      return;
-    }
-    if (!patientInfo.duration || isNaN(parseInt(patientInfo.duration))) {
-      setError('Duration is required and must be a valid number');
-      return;
-    }
-    if (!patientInfo.durationUnit) {
-      setError('Duration unit is required');
-      return;
-    }
-    if (!patientInfo.severity) {
-      setError('Severity is required');
-      return;
-    }
-    if (!patientInfo.travelRegion) {
-      setError('Travel region is required');
-      return;
-    }
-    if (!patientInfo.drugHistory) {
-      setError('Drug history is required');
-      return;
-    }
-
     const result = await calculateDiagnosis(
       selectedSymptoms,
       parseInt(patientInfo.duration),
@@ -140,184 +316,272 @@ const SymptomInput = ({ onDiagnosisResults }) => {
       patientInfo.travelRegion,
       patientInfo.riskFactors
     );
-
     onDiagnosisResults(result);
+    setMessages((prev) => [
+      ...prev,
+      { text: 'Submitting for diagnosis...', isUser: true },
+    ]);
+  };
+
+  const handleInputSubmit = (e) => {
+    if (e.key === 'Enter' || e.type === 'click') {
+      if (currentStep === 'symptoms') {
+        if (input.toLowerCase() === 'done') {
+          if (selectedSymptoms.length < 2) {
+            setError('Please select at least two symptoms.');
+            setMessages((prev) => [
+              ...prev,
+              { text: 'Please select at least two symptoms before proceeding.', isUser: false },
+            ]);
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              { text: 'Done', isUser: true },
+              { text: getNextPrompt(steps[currentStep].next), isUser: false },
+            ]);
+            setCurrentStep(steps[currentStep].next);
+            setInput('');
+          }
+        } else if (suggestions.length > 0) {
+          handleSymptomSelect(suggestions[0]);
+        }
+      } else if (currentStep === 'riskFactors' && input.toLowerCase() === 'none') {
+        setMessages((prev) => [
+          ...prev,
+          { text: 'None', isUser: true },
+          { text: getNextPrompt(steps[currentStep].next), isUser: false },
+        ]);
+        setPatientInfo((prev) => ({ ...prev, riskFactors: [] }));
+        setCurrentStep(steps[currentStep].next);
+        setInput('');
+      } else if (currentStep === 'submit' && input.toLowerCase() === 'submit') {
+        handleSubmit();
+      } else if (['age', 'duration'].includes(currentStep)) {
+        if (input && !isNaN(parseInt(input))) {
+          handlePatientInfoChange(currentStep, input);
+          setInput('');
+        } else {
+          setError(steps[currentStep].error);
+          setMessages((prev) => [
+            ...prev,
+            { text: steps[currentStep].error, isUser: false },
+          ]);
+        }
+      }
+    }
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4">
+    <ChatContainer>
+      <ChatMessages>
+        {messages.map((msg, index) => (
+          <Message key={index} isUser={msg.isUser}>
+            <Box>
+              <Typography variant="body2">{msg.text}</Typography>
+            </Box>
+          </Message>
+        ))}
+        <div ref={chatEndRef} />
+      </ChatMessages>
+
       {error && (
-        <p className="text-destructive mb-4 text-center">{error}</p>
+        <Typography className="text-destructive mb-4 text-center">{error}</Typography>
       )}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-foreground mb-1">Age</label>
-        <input
+
+      {currentStep === 'age' && (
+        <StyledTextField
+          fullWidth
+          label="Age"
           type="number"
-          value={patientInfo.age}
-          onChange={(e) => handlePatientInfoChange('age', e.target.value)}
-          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={handleInputSubmit}
           placeholder="Enter age"
           required
         />
-      </div>
+      )}
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-foreground mb-1">Gender</label>
-        <select
+      {currentStep === 'gender' && (
+        <CustomSelect
+          label="Gender"
           value={patientInfo.gender}
-          onChange={(e) => handlePatientInfoChange('gender', e.target.value)}
-          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+          options={['Male', 'Female', 'Other']}
+          onSelect={(value) => handlePatientInfoChange('gender', value)}
+          placeholder="Select gender"
           required
-        >
-          <option value="" disabled>Select gender</option>
-          {['Male', 'Female', 'Other'].map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </div>
+        />
+      )}
 
-      <div className="mb-4 relative">
-        <label className="block text-sm font-medium text-foreground mb-1">Symptoms</label>
-        <div className="relative">
-          <input
-            type="text"
+      {currentStep === 'symptoms' && (
+        <Box sx={{ position: 'relative' }}>
+          <StyledTextField
+            fullWidth
+            label="Symptoms"
+            placeholder="Type symptoms or 'done'"
             value={input}
             onChange={handleInputChange}
-            className="w-full p-2 pr-10 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-            placeholder="Type to search symptoms..."
+            onKeyPress={handleInputSubmit}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Plus size={16} className="text-primary" />
+                </InputAdornment>
+              ),
+            }}
             required
           />
-          <Plus size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary" />
-        </div>
-        {suggestions.length > 0 && (
-          <div className="absolute w-full max-h-60 overflow-y-auto bg-background border border-border rounded-md shadow-md mt-1 z-10">
-            {suggestions.map((suggestion, index) => (
-              <div
-                key={index}
-                className="flex items-center p-2 cursor-pointer hover:bg-muted suggestion-highlight"
-                onClick={() => handleSymptomSelect(suggestion)}
-              >
-                {suggestion.type === 'combination' && (
-                  <Link size={16} className="mr-2 text-primary" />
-                )}
-                <span className={suggestion.type === 'combination' ? 'italic' : ''}>{suggestion.text}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {selectedSymptoms.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {selectedSymptoms.map((symptom) => (
-              <div
-                key={symptom}
-                className="flex items-center px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm"
-              >
-                {symptom}
-                <X
-                  size={16}
-                  className="ml-2 cursor-pointer hover:text-destructive"
-                  onClick={() => removeSymptom(symptom)}
+          {suggestions.length > 0 && (
+            <SuggestionsContainer>
+              {suggestions.map((suggestion, index) => (
+                <ListItem
+                  key={index}
+                  button
+                  onClick={() => handleSymptomSelect(suggestion)}
+                  className="suggestion-highlight"
+                  sx={{ '&:hover': { backgroundColor: 'hsl(var(--muted))' }, padding: 1 }}
+                >
+                  {suggestion.type === 'combination' && (
+                    <ListItemIcon>
+                      <Link size={16} className="text-primary" />
+                    </ListItemIcon>
+                  )}
+                  <ListItemText
+                    primary={suggestion.text}
+                    primaryTypographyProps={{
+                      className: suggestion.type === 'combination' ? 'italic' : '',
+                    }}
+                  />
+                </ListItem>
+              ))}
+            </SuggestionsContainer>
+          )}
+          {selectedSymptoms.length > 0 && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+              {selectedSymptoms.map((symptom) => (
+                <SelectedSymptomChip
+                  key={symptom}
+                  label={symptom}
+                  onDelete={() => removeSymptom(symptom)}
+                  deleteIcon={<X size={16} className="text-primary-foreground hover:text-destructive" />}
                 />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </Box>
+          )}
+        </Box>
+      )}
 
-      <div className="flex gap-4 mb-4 flex-col sm:flex-row">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-foreground mb-1">Duration</label>
-          <input
-            type="number"
-            value={patientInfo.duration}
-            onChange={(e) => handlePatientInfoChange('duration', e.target.value)}
-            className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-            placeholder="Enter number"
-            required
-          />
-        </div>
-        <div className="w-full sm:w-32">
-          <label className="block text-sm font-medium text-foreground mb-1">Duration Unit</label>
-          <select
-            value={patientInfo.durationUnit}
-            onChange={(e) => handlePatientInfoChange('durationUnit', e.target.value)}
-            className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-            required
-          >
-            <option value="" disabled>Unit</option>
-            {['Days', 'Weeks', 'Months'].map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+      {currentStep === 'duration' && (
+        <StyledTextField
+          fullWidth
+          label="Duration"
+          type="number"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={handleInputSubmit}
+          placeholder="Enter number"
+          required
+        />
+      )}
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-foreground mb-1">Severity</label>
-        <select
+      {currentStep === 'durationUnit' && (
+        <CustomSelect
+          label="Duration Unit"
+          value={patientInfo.durationUnit}
+          options={['Days', 'Weeks', 'Months']}
+          onSelect={(value) => handlePatientInfoChange('durationUnit', value)}
+          placeholder="Select unit"
+          required
+        />
+      )}
+
+      {currentStep === 'severity' && (
+        <CustomSelect
+          label="Severity"
           value={patientInfo.severity}
-          onChange={(e) => handlePatientInfoChange('severity', e.target.value)}
-          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+          options={['Mild', 'Moderate', 'Severe']}
+          onSelect={(value) => handlePatientInfoChange('severity', value)}
+          placeholder="Select severity"
           required
-        >
-          <option value="" disabled>Select severity</option>
-          {['Mild', 'Moderate', 'Severe'].map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </div>
+        />
+      )}
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-foreground mb-1">Travel Region</label>
-        <select
+      {currentStep === 'travelRegion' && (
+        <CustomSelect
+          label="Travel Region"
           value={patientInfo.travelRegion}
-          onChange={(e) => handlePatientInfoChange('travelRegion', e.target.value)}
-          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+          options={Object.keys(travelRiskFactors)}
+          onSelect={(value) => handlePatientInfoChange('travelRegion', value)}
+          placeholder="Select travel region"
           required
-        >
-          <option value="" disabled>Select travel region</option>
-          {Object.keys(travelRiskFactors).map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </div>
+        />
+      )}
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-foreground mb-1">Risk Factors</label>
-        <select
-          multiple
-          value={patientInfo.riskFactors}
-          onChange={(e) => handlePatientInfoChange('riskFactors', Array.from(e.target.selectedOptions, (option) => option.value))}
-          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary h-24"
-        >
-          {Object.keys(riskFactorWeights).map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </div>
+      {currentStep === 'riskFactors' && (
+        <Box>
+          <CustomSelect
+            label="Risk Factors"
+            value={patientInfo.riskFactors}
+            options={Object.keys(riskFactorWeights)}
+            onSelect={(value) => handlePatientInfoChange('riskFactors', value)}
+            placeholder="Select risk factors"
+            multiple
+          />
+          <Button
+            onClick={() => {
+              setMessages((prev) => [
+                ...prev,
+                { text: 'None', isUser: true },
+                { text: getNextPrompt(steps[currentStep].next), isUser: false },
+              ]);
+              setPatientInfo((prev) => ({ ...prev, riskFactors: [] }));
+              setCurrentStep(steps[currentStep].next);
+            }}
+            sx={{ mt: 1 }}
+          >
+            Skip (No Risk Factors)
+          </Button>
+        </Box>
+      )}
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-foreground mb-1">Drug History</label>
-        <select
+      {currentStep === 'drugHistory' && (
+        <CustomSelect
+          label="Drug History"
           value={patientInfo.drugHistory}
-          onChange={(e) => handlePatientInfoChange('drugHistory', e.target.value)}
-          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+          options={Object.keys(drugHistoryWeights)}
+          onSelect={(value) => handlePatientInfoChange('drugHistory', value)}
+          placeholder="Select drug history"
           required
-        >
-          <option value="" disabled>Select drug history</option>
-          {Object.keys(drugHistoryWeights).map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </div>
+        />
+      )}
 
-      <button
-        onClick={handleSubmit}
-        className="w-full p-3 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
-      >
-        Get Diagnosis
-      </button>
-    </div>
+      {currentStep === 'submit' && (
+        <StyledTextField
+          fullWidth
+          label="Confirm"
+          placeholder="Type 'submit' to get diagnosis"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={handleInputSubmit}
+          required
+        />
+      )}
+
+      {(currentStep === 'symptoms' || currentStep === 'submit' || ['age', 'duration'].includes(currentStep)) && (
+        <Button
+          variant="contained"
+          onClick={handleInputSubmit}
+          sx={{
+            mt: 2,
+            borderRadius: 'var(--radius)',
+            backgroundColor: 'hsl(var(--primary))',
+            color: 'hsl(var(--primary-foreground))',
+            '&:hover': { backgroundColor: 'hsl(var(--primary)/0.9)' },
+          }}
+        >
+          Submit
+        </Button>
+      )}
+    </ChatContainer>
   );
 };
 
