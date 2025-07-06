@@ -56,8 +56,8 @@ const Checker = () => {
   }, [isAnalyzing]);
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <div className="mb-8 text-center">
+    <div className="max-w-3xl mx-auto p-4 md:p-6">
+      <div className="mb-6 text-center">
         <h1 className="text-3xl font-bold text-primary">CareView Symptom Checker</h1>
         <p className="text-base text-muted-foreground mt-2">Enter your symptoms to explore possible diagnoses. Always consult a healthcare professional for medical advice.</p>
       </div>
@@ -78,8 +78,8 @@ const Checker = () => {
       )}
 
       {diagnosis.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-semibold text-primary mb-6">Possible Diagnoses</h2>
+        <div className="mt-6">
+          <h2 className="text-2xl font-semibold text-primary mb-4">Possible Diagnoses</h2>
           {isAnalyzing ? (
             <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
