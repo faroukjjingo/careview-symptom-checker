@@ -1,80 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Link } from 'lucide-react';
 import { symptomList } from './SymptomList';
-import {
-  Box,
-  TextField,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
-  Chip,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Paper,
-  InputAdornment,
-  Typography,
-  Button,
-} from '@mui/material';
-import { styled } from '@mui/material/styles';
-import LinkIcon from '@mui/icons-material/Link';
 import { symptomCombinations } from './SymptomCombinations';
-import calculateDiagnosis from './calculateDiagnosis';
-
-const StyledFormControl = styled(FormControl)(({ theme }) => ({
-  minWidth: 200,
-  marginBottom: theme.spacing(2),
-  '& .MuiInputBase-root': {
-    borderRadius: 8,
-    backgroundColor: theme.palette.background.paper,
-  },
-}));
-
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
-  '& .MuiInputBase-root': {
-    borderRadius: 8,
-  },
-}));
-
-const SuggestionsContainer = styled(Paper)(({ theme }) => ({
-  position: 'absolute',
-  zIndex: 1000,
-  width: '100%',
-  maxHeight: 300,
-  overflowY: 'auto',
-  borderRadius: 8,
-  boxShadow: theme.shadows[3],
-}));
-
-const SelectedSymptomChip = styled(Chip)(({ theme }) => ({
-  margin: theme.spacing(0.5),
-  borderRadius: 16,
-  backgroundColor: theme.palette.primary.light,
-  color: theme.palette.primary.contrastText,
-}));
-
-const CustomSelect = ({ label, value, options, onSelect, placeholder, required }) => {
-  return (
-    <StyledFormControl required={required}>
-      <InputLabel>{label}</InputLabel>
-      <Select
-        value={value || ''}
-        onChange={(e) => onSelect(e.target.value)}
-        label={label}
-        displayEmpty
-        renderValue={(selected) => (selected ? selected : <em>{placeholder}</em>)}
-      >
-        {options.map((option) => (
-          <MenuItem key={option} value={option}>
-            {option}
-          </MenuItem>
-        ))}
-      </Select>
-    </StyledFormControl>
-  );
-};
+import { travelRiskFactors } from './TravelRiskFactors';
+import { riskFactorWeights } from './RiskFactorWeights';
+import { drugHistoryWeights } from './DrugHistoryWeights';
 
 const SymptomInput = ({ onDiagnosisResults }) => {
   const [input, setInput] = useState('');
@@ -165,7 +95,6 @@ const SymptomInput = ({ onDiagnosisResults }) => {
   };
 
   const handleSubmit = async () => {
-    // Validate all fields
     if (!patientInfo.age || isNaN(parseInt(patientInfo.age))) {
       setError('Age is required and must be a valid number');
       return;
@@ -190,6 +119,14 @@ const SymptomInput = ({ onDiagnosisResults }) => {
       setError('Severity is required');
       return;
     }
+    if (!patientInfo.travelRegion) {
+      setError('Travel region is required');
+      return;
+    }
+    if (!patientInfo.drugHistory) {
+      setError('Drug history is required');
+      return;
+    }
 
     const result = await calculateDiagnosis(
       selectedSymptoms,
@@ -207,153 +144,179 @@ const SymptomInput = ({ onDiagnosisResults }) => {
   };
 
   return (
-    <Box sx={{ maxWidth: 600, margin: '0 auto', padding: 2 }}>
+    <div className="max-w-xl mx-auto p-4">
       {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
+        <p className="text-destructive mb-4 text-center">{error}</p>
       )}
-      <StyledTextField
-        fullWidth
-        label="Age"
-        type="number"
-        value={patientInfo.age}
-        onChange={(e) => handlePatientInfoChange('age', e.target.value)}
-        placeholder="Enter age"
-        required
-      />
-
-      <CustomSelect
-        label="Gender"
-        value={patientInfo.gender}
-        options={['Male', 'Female', 'Other']}
-        onSelect={(value) => handlePatientInfoChange('gender', value)}
-        placeholder="Select gender"
-        required
-      />
-
-      <Box sx={{ position: 'relative', marginBottom: 2 }}>
-        <StyledTextField
-          fullWidth
-          label="Symptoms"
-          placeholder="Type to search symptoms..."
-          value={input}
-          onChange={handleInputChange}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <Plus size={16} />
-              </InputAdornment>
-            ),
-          }}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-foreground mb-1">Age</label>
+        <input
+          type="number"
+          value={patientInfo.age}
+          onChange={(e) => handlePatientInfoChange('age', e.target.value)}
+          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+          placeholder="Enter age"
           required
         />
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-foreground mb-1">Gender</label>
+        <select
+          value={patientInfo.gender}
+          onChange={(e) => handlePatientInfoChange('gender', e.target.value)}
+          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+          required
+        >
+          <option value="" disabled>Select gender</option>
+          {['Male', 'Female', 'Other'].map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-4 relative">
+        <label className="block text-sm font-medium text-foreground mb-1">Symptoms</label>
+        <div className="relative">
+          <input
+            type="text"
+            value={input}
+            onChange={handleInputChange}
+            className="w-full p-2 pr-10 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+            placeholder="Type to search symptoms..."
+            required
+          />
+          <Plus size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary" />
+        </div>
         {suggestions.length > 0 && (
-          <SuggestionsContainer>
+          <div className="absolute w-full max-h-60 overflow-y-auto bg-background border border-border rounded-md shadow-md mt-1 z-10">
             {suggestions.map((suggestion, index) => (
-              <ListItem
+              <div
                 key={index}
-                button
+                className="flex items-center p-2 cursor-pointer hover:bg-muted suggestion-highlight"
                 onClick={() => handleSymptomSelect(suggestion)}
-                sx={{
-                  '&:hover': { backgroundColor: 'action.hover' },
-                  padding: 1,
-                }}
               >
                 {suggestion.type === 'combination' && (
-                  <ListItemIcon>
-                    <LinkIcon fontSize="small" />
-                  </ListItemIcon>
+                  <Link size={16} className="mr-2 text-primary" />
                 )}
-                <ListItemText primary={suggestion.text} />
-              </ListItem>
+                <span className={suggestion.type === 'combination' ? 'italic' : ''}>{suggestion.text}</span>
+              </div>
             ))}
-          </SuggestionsContainer>
+          </div>
         )}
         {selectedSymptoms.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+          <div className="flex flex-wrap gap-2 mt-2">
             {selectedSymptoms.map((symptom) => (
-              <SelectedSymptomChip
+              <div
                 key={symptom}
-                label={symptom}
-                onDelete={() => removeSymptom(symptom)}
-                deleteIcon={<X size={16} />}
-              />
+                className="flex items-center px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm"
+              >
+                {symptom}
+                <X
+                  size={16}
+                  className="ml-2 cursor-pointer hover:text-destructive"
+                  onClick={() => removeSymptom(symptom)}
+                />
+              </div>
             ))}
-          </Box>
+          </div>
         )}
-      </Box>
+      </div>
 
-      <Box sx={{ display: 'flex', gap: 2, marginBottom: 2 }}>
-        <StyledTextField
-          fullWidth
-          label="Duration"
-          type="number"
-          value={patientInfo.duration}
-          onChange={(e) => handlePatientInfoChange('duration', e.target.value)}
-          placeholder="Enter number"
+      <div className="flex gap-4 mb-4 flex-col sm:flex-row">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-foreground mb-1">Duration</label>
+          <input
+            type="number"
+            value={patientInfo.duration}
+            onChange={(e) => handlePatientInfoChange('duration', e.target.value)}
+            className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+            placeholder="Enter number"
+            required
+          />
+        </div>
+        <div className="w-full sm:w-32">
+          <label className="block text-sm font-medium text-foreground mb-1">Duration Unit</label>
+          <select
+            value={patientInfo.durationUnit}
+            onChange={(e) => handlePatientInfoChange('durationUnit', e.target.value)}
+            className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+            required
+          >
+            <option value="" disabled>Unit</option>
+            {['Days', 'Weeks', 'Months'].map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-foreground mb-1">Severity</label>
+        <select
+          value={patientInfo.severity}
+          onChange={(e) => handlePatientInfoChange('severity', e.target.value)}
+          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
           required
-        />
-        <CustomSelect
-          label="Duration Unit"
-          value={patientInfo.durationUnit}
-          options={['Days', 'Weeks', 'Months']}
-          onSelect={(value) => handlePatientInfoChange('durationUnit', value)}
-          placeholder="Unit"
+        >
+          <option value="" disabled>Select severity</option>
+          {['Mild', 'Moderate', 'Severe'].map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-foreground mb-1">Travel Region</label>
+        <select
+          value={patientInfo.travelRegion}
+          onChange={(e) => handlePatientInfoChange('travelRegion', e.target.value)}
+          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
           required
-        />
-      </Box>
+        >
+          <option value="" disabled>Select travel region</option>
+          {Object.keys(travelRiskFactors).map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
 
-      <CustomSelect
-        label="Severity"
-        value={patientInfo.severity}
-        options={['Mild', 'Moderate', 'Severe']}
-        onSelect={(value) => handlePatientInfoChange('severity', value)}
-        placeholder="Select severity"
-        required
-      />
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-foreground mb-1">Risk Factors</label>
+        <select
+          multiple
+          value={patientInfo.riskFactors}
+          onChange={(e) => handlePatientInfoChange('riskFactors', Array.from(e.target.selectedOptions, (option) => option.value))}
+          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary h-24"
+        >
+          {Object.keys(riskFactorWeights).map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
 
-      <CustomSelect
-        label="Travel Region"
-        value={patientInfo.travelRegion}
-        options={Object.keys(travelRiskFactors)}
-        onSelect={(value) => handlePatientInfoChange('travelRegion', value)}
-        placeholder="Select travel region"
-        required
-      />
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-foreground mb-1">Drug History</label>
+        <select
+          value={patientInfo.drugHistory}
+          onChange={(e) => handlePatientInfoChange('drugHistory', e.target.value)}
+          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+          required
+        >
+          <option value="" disabled>Select drug history</option>
+          {Object.keys(drugHistoryWeights).map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
 
-      <CustomSelect
-        label="Risk Factors"
-        value={patientInfo.riskFactors}
-        options={Object.keys(riskFactorWeights)}
-        onSelect={(value) =>
-          handlePatientInfoChange('riskFactors', [
-            ...patientInfo.riskFactors,
-            value,
-          ])
-        }
-        placeholder="Select risk factors"
-        multiple
-      />
-
-      <CustomSelect
-        label="Drug History"
-        value={patientInfo.drugHistory}
-        options={Object.keys(drugHistoryWeights)}
-        onSelect={(value) => handlePatientInfoChange('drugHistory', value)}
-        placeholder="Select drug history"
-        required
-      />
-
-      <Button
-        variant="contained"
-        color="primary"
+      <button
         onClick={handleSubmit}
-        sx={{ mt: 2 }}
+        className="w-full p-3 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
       >
         Get Diagnosis
-      </Button>
-    </Box>
+      </button>
+    </div>
   );
 };
 
