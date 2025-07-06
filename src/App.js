@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Checker from './components/Checker';
-import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import './index.css';
 
 function App() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans flex">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Header />
+    <div className="min-h-screen bg-background text-foreground font-sans flex flex-col">
+      <Header isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+      <div className="flex flex-1">
         <main className="flex-1 p-4">
           <Checker />
         </main>
