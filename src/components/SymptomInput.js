@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, X, Send, Bot } from 'lucide-react';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
@@ -6,6 +6,7 @@ import { travelRiskFactors } from './TravelRiskFactors';
 import { riskFactorWeights } from './RiskFactorWeights';
 import drugHistoryWeights from './DrugHistoryWeights';
 import calculateDiagnosis from './SymptomCalculations';
+import { debounce } from 'lodash';
 
 const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setPatientInfo, onDiagnosisResults }) => {
   const [input, setInput] = useState('');
@@ -106,65 +107,78 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
     setMessages((prev) => [...prev, { text: '', isUser: false, isTyping: true }]);
   };
 
-  const handleInputChange = (e) => {
-    const text = e.target.value;
-    setInput(text);
+  const handleInputChange = useCallback(
+    debounce((e) => {
+      const text = e.target.value;
+      setInput(text);
 
-    if (!text.trim()) {
-      setSuggestions([]);
-      return;
-    }
+      if (!text.trim()) {
+        setSuggestions([]);
+        return;
+      }
 
-    if (currentStep === 'symptoms') {
-      const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
-      const filteredSymptoms = availableSymptoms
-        .filter(
-          (symptom) =>
-            symptom.toLowerCase().includes(text.toLowerCase()) &&
-            !selectedSymptoms.includes(symptom)
-        )
-        .slice(0, 2); // Limit to 2 individual symptoms
+      if (currentStep === 'symptoms') {
+        const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
+        const filteredSymptoms = availableSymptoms
+          .filter(
+            (symptom) =>
+              symptom.toLowerCase().includes(text.toLowerCase()) &&
+              !selectedSymptoms.includes(symptom)
+          )
+          .sort((a, b) => {
+            const aMatch = a.toLowerCase().startsWith(text.toLowerCase()) ? -1 : 0;
+            const bMatch = b.toLowerCase().startsWith(text.toLowerCase()) ? -1 : 0;
+            return aMatch - bMatch || a.localeCompare(b);
+          })
+          .slice(0, 2);
 
-      const combinationKeys = Object.keys(symptomCombinations);
-      const filteredCombinations = combinationKeys
-        .filter((combination) => {
-          const symptoms = combination.split(', ');
-          return (
-            symptoms.some((symptom) => symptom.toLowerCase().includes(text.toLowerCase())) &&
-            symptoms.some((symptom) => !selectedSymptoms.includes(symptom))
-          );
-        })
-        .slice(0, 2); // Limit to 2 combinations
+        const combinationKeys = Object.keys(symptomCombinations);
+        const filteredCombinations = combinationKeys
+          .filter((combination) => {
+            const symptoms = combination.split(', ');
+            return (
+              symptoms.some((symptom) => symptom.toLowerCase().includes(text.toLowerCase())) &&
+              symptoms.some((symptom) => !selectedSymptoms.includes(symptom))
+            );
+          })
+          .sort((a, b) => {
+            const aMatch = a.toLowerCase().startsWith(text.toLowerCase()) ? -1 : 0;
+            const bMatch = b.toLowerCase().startsWith(text.toLowerCase()) ? -1 : 0;
+            return aMatch - bMatch || a.localeCompare(b);
+          })
+          .slice(0, 2);
 
-      const combinedSuggestions = [
-        ...filteredCombinations.map((combination) => ({
-          type: 'combination',
-          text: combination,
-          symptoms: combination.split(', '),
-        })),
-        ...filteredSymptoms.map((symptom) => ({
-          type: 'single',
-          text: symptom,
-        })),
-      ];
+        const combinedSuggestions = [
+          ...filteredCombinations.map((combination) => ({
+            type: 'combination',
+            text: combination,
+            symptoms: combination.split(', '),
+          })),
+          ...filteredSymptoms.map((symptom) => ({
+            type: 'single',
+            text: symptom,
+          })),
+        ];
 
-      setSuggestions(combinedSuggestions);
-    } else if (['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
-      const options = {
-        gender: ['Male', 'Female', 'Other'],
-        durationUnit: ['Days', 'Weeks', 'Months'],
-        severity: ['Mild', 'Moderate', 'Severe'],
-        travelRegion: [...Object.keys(travelRiskFactors), 'None'],
-        drugHistory: Object.keys(drugHistoryWeights),
-      }[currentStep];
-      const filteredOptions = options
-        .filter((option) => option.toLowerCase().includes(text.toLowerCase()))
-        .slice(0, 4); // Limit to 4 for non-symptom fields
-      setSuggestions(filteredOptions.map((option) => ({ type: 'single', text: option })));
-    } else {
-      setSuggestions([]);
-    }
-  };
+        setSuggestions(combinedSuggestions);
+      } else if (['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
+        const options = {
+          gender: ['Male', 'Female', 'Other'],
+          durationUnit: ['Days', 'Weeks', 'Months'],
+          severity: ['Mild', 'Moderate', 'Severe'],
+          travelRegion: [...Object.keys(travelRiskFactors), 'None'],
+          drugHistory: Object.keys(drugHistoryWeights),
+        }[currentStep];
+        const filteredOptions = options
+          .filter((option) => option.toLowerCase().includes(text.toLowerCase()))
+          .slice(0, 4);
+        setSuggestions(filteredOptions.map((option) => ({ type: 'single', text: option })));
+      } else {
+        setSuggestions([]);
+      }
+    }, 300),
+    [currentStep, selectedSymptoms]
+  );
 
   const handleSymptomSelect = (suggestion) => {
     let symptomsToAdd = suggestion.type === 'combination' ? suggestion.symptoms : [suggestion.text];
@@ -281,7 +295,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       } else if (currentStep === 'symptoms') {
         if (inputLower === 'done') {
           if (selectedSymptoms.length < 2) {
-            set Oscillator.setError('Please select at least two symptoms.');
+            setError('Please select at least two symptoms.');
             addBotMessage('You need at least two symptoms to proceed. Please add more or select from the list.');
           } else {
             setCurrentStep(steps[currentStep].next);
@@ -527,7 +541,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       )}
 
       {suggestions.length > 0 && (
-        <div className="absolute w-full max-w-full max-h-32 overflow-y-auto bg-popover border border-border rounded-lg shadow-lg mt-1 z-10 left-0 right-0 mx-2">
+        <div className="absolute w-full max-w-full max-h-32 overflow-y-auto bg-popover border border-border rounded-lg shadow-lg mt-1 z-[1000] left-0 right-0 mx-2">
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
