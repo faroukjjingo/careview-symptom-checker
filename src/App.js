@@ -1,5 +1,6 @@
 import React from 'react';
 import Checker from './components/Checker';
+import './index.css';
 
 function App() {
   return (
