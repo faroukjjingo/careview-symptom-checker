@@ -4,12 +4,12 @@ import { Plus, X, Send, Bot } from 'lucide-react';
 import SymptomChat from './SymptomChat';
 import SymptomSelector from './SymptomSelector';
 import PatientInfoSelector from './PatientInfoSelector';
-import { symptomList } from '../utils/SymptomList';
-import { symptomCombinations } from '../utils/SymptomCombinations';
-import { travelRiskFactors } from '../utils/TravelRiskFactors';
-import { riskFactorWeights } from '../utils/RiskFactorWeights';
-import drugHistoryWeights from '../utils/DrugHistoryWeights';
-import calculateDiagnosis from '../utils/SymptomCalculations';
+import { symptomList } from './SymptomList';
+import { symptomCombinations } from './SymptomCombinations';
+import { travelRiskFactors } from './TravelRiskFactors';
+import { riskFactorWeights } from './RiskFactorWeights';
+import drugHistoryWeights from './DrugHistoryWeights';
+import calculateDiagnosis from './SymptomCalculations';
 
 const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setPatientInfo, onDiagnosisResults }) => {
   const [input, setInput] = useState('');
