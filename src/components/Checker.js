@@ -22,32 +22,49 @@ const Checker = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expandedCard, setExpandedCard] = useState(null);
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [displayedDiagnosis, setDisplayedDiagnosis] = useState([]);
+  const [typingIndex, setTypingIndex] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
 
   const handleDiagnosisResults = (result) => {
     if (result.error) {
       setError(result.error);
       setDiagnosis([]);
+      setDisplayedDiagnosis([]);
       setIsAnalyzing(false);
       return;
     }
-    simulateAnalysis(result);
+    setDiagnosis(result.detailed);
+    simulateAnalysis(result.detailed);
   };
 
   const simulateAnalysis = (result) => {
     setAnalysisProgress(0);
+    setIsAnalyzing(true);
     const interval = setInterval(() => {
       setAnalysisProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
           setIsAnalyzing(false);
-          setDiagnosis(result.detailed);
-          if (result.redFlag) setError(result.redFlag);
+          setIsTyping(true);
           return 100;
         }
         return prev + 5;
       });
     }, 100);
   };
+
+  useEffect(() => {
+    if (isTyping && diagnosis.length > 0 && typingIndex < diagnosis.length) {
+      const timer = setTimeout(() => {
+        setDisplayedDiagnosis((prev) => [...prev, diagnosis[typingIndex]]);
+        setTypingIndex((prev) => prev + 1);
+      }, 500); // Delay for typewriter effect
+      return () => clearTimeout(timer);
+    } else if (typingIndex >= diagnosis.length) {
+      setIsTyping(false);
+    }
+  }, [isTyping, typingIndex, diagnosis]);
 
   useEffect(() => {
     document.body.style.cursor = isAnalyzing ? 'wait' : 'default';
@@ -96,7 +113,7 @@ const Checker = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {diagnosis.map((diag, index) => (
+              {displayedDiagnosis.map((diag, index) => (
                 <DiagnosisCard
                   key={index}
                   diagnosis={diag.diagnosis}
@@ -109,6 +126,9 @@ const Checker = () => {
                   guidance={guidance[diag.diagnosis.toLowerCase()]}
                 />
               ))}
+              {isTyping && (
+                <div className="text-sm text-muted-foreground italic">Generating more diagnoses...</div>
+              )}
             </div>
           )}
         </div>
