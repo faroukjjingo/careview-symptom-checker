@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
 import DiagnosisCard from './DiagnosisCard';
-import calculateDiagnosis from '../utils/SymptomCalculations';
-import { guidance } from '../utils/guidance';
+import calculateDiagnosis from './SymptomCalculations';
+import { guidance } from './guidance';
 
 const Checker = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
