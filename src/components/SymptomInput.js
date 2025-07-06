@@ -4,7 +4,7 @@ import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
 import { travelRiskFactors } from './TravelRiskFactors';
 import { riskFactorWeights } from './RiskFactorWeights';
-import { drugHistoryWeights } from './DrugHistoryWeights';
+import drugHistoryWeights from './DrugHistoryWeights';
 import calculateDiagnosis from './SymptomCalculations';
 
 const SymptomInput = ({ onDiagnosisResults }) => {
