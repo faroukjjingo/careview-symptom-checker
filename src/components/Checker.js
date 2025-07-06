@@ -105,7 +105,13 @@ const Checker = () => {
         <p className="text-base text-muted-foreground">Input your symptoms to explore potential diagnoses</p>
       </div>
 
-      <SymptomInput onDiagnosisResults={handleDiagnosisResults} />
+      <SymptomInput 
+        selectedSymptoms={selectedSymptoms}
+        setSelectedSymptoms={setSelectedSymptoms}
+        patientInfo={patientInfo}
+        setPatientInfo={setPatientInfo}
+        onDiagnosisResults={handleDiagnosisResults}
+      />
 
       {errorMessage && (
         <p className="text-destructive text-center font-medium mt-4">{errorMessage}</p>
