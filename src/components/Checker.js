@@ -56,7 +56,7 @@ const Checker = () => {
   }, [isAnalyzing]);
 
   return (
-<div className="min-h-screen w-full px-4 py-1">
+<div className="min-h-screen w-full px-1 py-1">
       <div className="mb-2 text-center">
         <h1 className="text-xl font-bold text-primary">CareView Symptom Checker</h1>
         <p className="text-xs text-muted-foreground mt-0.5">Developed by trusted healthcare professionals to explore possible diagnoses. Always consult a doctor for medical advice.</p>
