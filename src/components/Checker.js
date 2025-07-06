@@ -1,51 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
+import DiagnosisCard from './DiagnosisCard';
 import calculateDiagnosis from './SymptomCalculations';
 import { guidance } from './guidance';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-
-const DiagnosisCard = ({ diagnosis, probability, confidence, index, isExpanded, onToggle, explanation }) => {
-  const guidanceData = guidance[diagnosis.toLowerCase()];
-  return (
-    <div className="rounded-lg shadow-md mb-4 bg-card">
-      <div
-        className="flex justify-between items-center p-4 cursor-pointer hover:bg-muted"
-        onClick={() => onToggle(index)}
-      >
-        <h3 className="text-lg font-medium text-card-foreground">{diagnosis}</h3>
-        <div className="flex items-center gap-4">
-          <span
-            className={`px-3 py-1 rounded-full text-sm font-medium text-white ${
-              confidence === 'High' ? 'bg-green-500' :
-              confidence === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
-            }`}
-          >
-            {confidence}
-          </span>
-          <span className="text-sm text-muted-foreground">{probability}% Likely</span>
-          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </div>
-      </div>
-      {isExpanded && (
-        <div className="p-4 border-t border-border bg-card">
-          <h4 className="text-base font-medium text-primary mb-2">Explanation</h4>
-          <p className="text-sm text-muted-foreground mb-4">{explanation}</p>
-          {guidanceData ? (
-            <>
-              <h4 className="text-base font-medium text-primary mb-2">Guidance</h4>
-              <p className="text-sm text-muted-foreground mb-2"><strong>Next Steps:</strong> {guidanceData.steps}</p>
-              <div className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: guidanceData.content.replace(/\n/g, '<br />') }} />
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              No specific guidance available for {diagnosis}. Consult a healthcare provider for further evaluation.
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const Checker = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
@@ -86,9 +43,9 @@ const Checker = () => {
           if (result.redFlag) setError(result.redFlag);
           return 100;
         }
-        return prev + 10;
+        return prev + 5;
       });
-    }, 200);
+    }, 100);
   };
 
   useEffect(() => {
@@ -99,10 +56,10 @@ const Checker = () => {
   }, [isAnalyzing]);
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
+    <div className="max-w-3xl mx-auto p-6">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-primary">CareView</h1>
-        <p className="text-base text-muted-foreground">Input your symptoms to explore potential diagnoses</p>
+        <h1 className="text-3xl font-bold text-primary">CareView Symptom Checker</h1>
+        <p className="text-base text-muted-foreground mt-2">Enter your symptoms to explore possible diagnoses. Always consult a healthcare professional for medical advice.</p>
       </div>
 
       <SymptomInput 
@@ -114,37 +71,44 @@ const Checker = () => {
       />
 
       {errorMessage && (
-        <p className="text-destructive text-center font-medium mt-4">{errorMessage}</p>
+        <div className="mt-4 p-4 bg-destructive/10 text-destructive rounded-lg text-center">
+          <p className="font-medium">{errorMessage}</p>
+          <p className="text-sm mt-2">Please consult a healthcare provider immediately for serious symptoms.</p>
+        </div>
       )}
 
       {diagnosis.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-xl font-medium text-primary mb-4">Diagnosis Results</h2>
+          <h2 className="text-2xl font-semibold text-primary mb-6">Possible Diagnoses</h2>
           {isAnalyzing ? (
-            <div className="flex items-center gap-4 p-4">
+            <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
               <div className="flex-1">
-                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <p className="text-sm text-muted-foreground">Analyzing your symptoms...</p>
+                <div className="w-full h-2 bg-background rounded-full overflow-hidden mt-2">
                   <div
-                    className="h-full bg-primary transition-all"
+                    className="h-full bg-primary transition-all duration-300"
                     style={{ width: `${analysisProgress}%` }}
                   ></div>
                 </div>
               </div>
             </div>
           ) : (
-            diagnosis.map((diag, index) => (
-              <DiagnosisCard
-                key={index}
-                diagnosis={diag.diagnosis}
-                probability={diag.probability}
-                confidence={diag.confidence}
-                index={index}
-                isExpanded={expandedCard === index}
-                onToggle={() => setExpandedCard(expandedCard === index ? null : index)}
-                explanation={diag.explanation}
-              />
-            ))
+            <div className="space-y-4">
+              {diagnosis.map((diag, index) => (
+                <DiagnosisCard
+                  key={index}
+                  diagnosis={diag.diagnosis}
+                  probability={diag.probability}
+                  confidence={diag.confidence}
+                  index={index}
+                  isExpanded={expandedCard === index}
+                  onToggle={() => setExpandedCard(expandedCard === index ? null : index)}
+                  explanation={diag.explanation}
+                  guidance={guidance[diag.diagnosis.toLowerCase()]}
+                />
+              ))}
+            </div>
           )}
         </div>
       )}
