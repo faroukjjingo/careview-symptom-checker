@@ -10,7 +10,7 @@ const SymptomSelector = ({ selectedSymptoms, removeSymptom, suggestions, handleS
           {selectedSymptoms.map((symptom) => (
             <div
               key={symptom}
-              className="flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-full text-sm"
+              className="flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-full text-base"
             >
               {symptom}
               <X
@@ -27,7 +27,7 @@ const SymptomSelector = ({ selectedSymptoms, removeSymptom, suggestions, handleS
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
-              className="p-2 cursor-pointer hover:bg-muted transition-colors suggestion-highlight text-sm"
+              className="p-2 cursor-pointer hover:bg-muted transition-colors suggestion-highlight text-base"
               onClick={() => handleSymptomSelect(suggestion)}
             >
               <span
