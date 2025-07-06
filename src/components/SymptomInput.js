@@ -13,7 +13,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState('welcome');
   const [messages, setMessages] = useState([
-    { text: "Hello! I'm CareView, here to help you explore possible diagnoses. Let's start with your age. How old are you?", isUser: false },
+    { text: "Hello! I'm CareView, here to help you explore possible diagnoses. Type 'start' to begin or 'help' for more info.", isUser: false },
   ]);
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -192,7 +192,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
     onDiagnosisResults(result);
     setMessages((prev) => [
       ...prev,
-      { text: 'Diagnosis results are ready!', isUser: false },
+      { text: 'Diagnosis results are ready! Scroll down to view them.', isUser: false },
     ]);
   };
 
@@ -205,8 +205,29 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         { text: input, isUser: true },
       ]);
 
-      if (currentStep === 'symptoms') {
-        if (input.toLowerCase() === 'done') {
+      const inputLower = input.toLowerCase().trim();
+
+      if (currentStep === 'welcome') {
+        if (inputLower === 'start') {
+          setMessages((prev) => [
+            ...prev,
+            { text: getNextPrompt('age'), isUser: false },
+          ]);
+          setCurrentStep('age');
+        } else if (inputLower === 'help') {
+          setMessages((prev) => [
+            ...prev,
+            { text: 'CareView guides you through entering symptoms and health details to explore possible diagnoses. Type "start" to begin, use the dropdowns to select options, or type your answers. You can also type "done" for symptoms or "none" for optional fields.', isUser: false },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            { text: 'Please type "start" to begin or "help" for more info.', isUser: false },
+          ]);
+        }
+        setInput('');
+      } else if (currentStep === 'symptoms') {
+        if (inputLower === 'done') {
           if (selectedSymptoms.length < 2) {
             setError('Please select at least two symptoms.');
             setMessages((prev) => [
@@ -229,10 +250,11 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             ...prev,
             { text: 'Please select a symptom from the list.', isUser: false },
           ]);
+          setInput('');
         }
-      } else if (currentStep === 'riskFactors' && input.toLowerCase() === 'none') {
+      } else if (currentStep === 'riskFactors' && inputLower === 'none') {
         handlePatientInfoChange('riskFactors', []);
-      } else if (currentStep === 'travelRegion' && input.toLowerCase() === 'none') {
+      } else if (currentStep === 'travelRegion' && inputLower === 'none') {
         handlePatientInfoChange('travelRegion', 'None');
       } else if (['age', 'duration'].includes(currentStep)) {
         if (input && !isNaN(parseInt(input)) && parseInt(input) > 0) {
@@ -243,6 +265,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             ...prev,
             { text: steps[currentStep].error, isUser: false },
           ]);
+          setInput('');
         }
       } else if (['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
         const options = {
@@ -253,7 +276,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           drugHistory: Object.keys(drugHistoryWeights),
         }[currentStep];
         const matchedOption = options.find((opt) =>
-          opt.toLowerCase() === input.toLowerCase()
+          opt.toLowerCase() === inputLower
         );
         if (matchedOption) {
           handlePatientInfoChange(currentStep, matchedOption);
@@ -265,9 +288,9 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             ...prev,
             { text: `Please select a valid ${currentStep}.`, isUser: false },
           ]);
+          setInput('');
         }
       }
-      setInput('');
     }
   };
 
@@ -276,7 +299,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   };
 
   return (
-    <div className="max-w-xl mx-auto p-0 h-[70vh] flex flex-col">
+    <div className="max-w-xl mx-auto p-4 h-[70vh] flex flex-col">
       <div className="flex-1 overflow-y-auto p-4 bg-background border border-border rounded-[var(--radius)] mb-4">
         {messages.map((msg, index) => (
           <div
@@ -418,6 +441,8 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
                   ? 'Type "none" or select from list'
                   : currentStep === 'travelRegion'
                   ? 'Type region or "none"'
+                  : currentStep === 'welcome'
+                  ? 'Type "start" or "help"'
                   : `Enter ${currentStep}`
               }
               className="w-full p-2 pr-10 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary"
