@@ -13,11 +13,11 @@ const SymptomChat = ({ messages, chatEndRef, error }) => {
             } ${msg.isTyping ? 'typing' : ''}`}
           >
             {!msg.isUser && <Bot size={16} className="mt-1" />}
-            <span className="text-sm">{msg.text}</span>
+            <span className="text-base">{msg.text}</span>
           </div>
         </div>
       ))}
-      {error && <p className="text-destructive text-center text-sm mt-2">{error}</p>}
+      {error && <p className="text-destructive text-center text-base mt-2">{error}</p>}
       <div ref={chatEndRef} />
     </div>
   );
