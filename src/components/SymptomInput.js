@@ -1,9 +1,10 @@
 // src/components/SymptomInput.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Send, Bot } from 'lucide-react';
+import { Plus, Send } from 'lucide-react';
 import SymptomChat from './SymptomChat';
 import SymptomSelector from './SymptomSelector';
 import PatientInfoSelector from './PatientInfoSelector';
+import BotMessages from './BotMessages';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
 import { travelRiskFactors } from './TravelRiskFactors';
@@ -18,7 +19,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   const [currentStep, setCurrentStep] = useState('welcome');
   const [messages, setMessages] = useState([
     {
-      text: "Hi there! I'm CareView, your symptom checker developed by trusted healthcare professionals. Type 'start' to begin or 'help' for more info.",
+      text: BotMessages.getWelcomeMessage(),
       isUser: false,
       isTyping: false,
     },
@@ -181,7 +182,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         ...prev,
         { text: `Added: ${uniqueNewSymptoms.join(', ')}`, isUser: true },
       ]);
-      addBotMessage(`Got it! Any more symptoms? (You need at least two. Type "done" when ready.)`);
+      addBotMessage(BotMessages.getSymptomPrompt());
       setError('');
     }
 
@@ -196,7 +197,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       ...prev,
       { text: `Removed: ${symptomToRemove}`, isUser: true },
     ]);
-    addBotMessage(`Any more symptoms to add or remove? (Type "done" when ready.)`);
+    addBotMessage(BotMessages.getSymptomPrompt());
   };
 
   const handlePatientInfoChange = (field, value) => {
@@ -218,30 +219,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   };
 
   const getNextPrompt = (step) => {
-    switch (step) {
-      case 'age':
-        return "Let's start with your age. How old are you? (Enter a number between 1 and 120)";
-      case 'gender':
-        return "What is your gender? Please select or type: Male, Female, or Other.";
-      case 'symptoms':
-        return "Now, tell me about your symptoms. Type to search and select at least two. When you're done, type 'done'.";
-      case 'duration':
-        return "How long have you been experiencing these symptoms? (Enter a number, e.g., 3)";
-      case 'durationUnit':
-        return "Is that in Days, Weeks, or Months? Please select or type one.";
-      case 'severity':
-        return "How severe are your symptoms? Please select or type: Mild, Moderate, or Severe.";
-      case 'travelRegion':
-        return "Have you traveled recently? Select a region or 'None' if you haven't.";
-      case 'riskFactors':
-        return "Any risk factors to note? Select any that apply or type 'none' to skip.";
-      case 'drugHistory':
-        return "What about your medication history? Please select or type an option.";
-      case 'submit':
-        return "All set! I'm analyzing your information now...";
-      default:
-        return '';
-    }
+    return BotMessages.getStepPrompt(step);
   };
 
   const handleSubmit = async () => {
@@ -275,11 +253,9 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         setCurrentStep('age');
         addBotMessage(getNextPrompt('age'));
       } else if (inputLower === 'help') {
-        addBotMessage(
-          "I'm CareView, developed by trusted healthcare professionals to help you understand your symptoms. I'll guide you step-by-step to enter your details. Type 'start' to begin, use the dropdowns to select options, or type your answers. You can type 'done' for symptoms or 'none' for optional fields like risk factors or travel."
-        );
+        addBotMessage(BotMessages.getHelpMessage());
       } else {
-        addBotMessage("Hmm, please type 'start' to begin or 'help' for more info.");
+        addBotMessage(BotMessages.getInvalidWelcomeMessage());
       }
       setInput('');
     } else if (currentStep === 'symptoms') {
