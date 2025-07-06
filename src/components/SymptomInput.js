@@ -262,7 +262,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           handleSymptomSelect(suggestions[0]);
         } else {
           setError('Please select a valid symptom from the list.');
-          addBotMessage('That symptom isn’t in our list. Please select one from the suggestions.');
+          addBotMessage('That symptom isn\'t in our list. Please select one from the suggestions.');
           setInput('');
         }
       } else if (currentStep === 'riskFactors' && inputLower === 'none') {
@@ -295,7 +295,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           handlePatientInfoChange(currentStep, suggestions[0].text);
         } else {
           setError(`Please select a valid ${currentStep} from the suggestions or type a matching value.`);
-          addBotMessage(`That’s not a valid ${currentStep}. Please select from the suggestions or type a matching value.`);
+          addBotMessage(`That's not a valid ${currentStep}. Please select from the suggestions or type a matching value.`);
           setInput('');
         }
       }
@@ -307,20 +307,20 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 md:p-6 h-[70vh] flex flex-col bg-card rounded-lg shadow-md">
-      <div className="flex-1 overflow-y-auto p-4 bg-background border border-border rounded-[var(--radius)] mb-4">
+    <div className="w-full min-h-screen flex flex-col bg-card px-2 sm:px-4 py-2">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-3 bg-background border border-border rounded-lg mb-2">
         {messages.map((msg, index) => (
           <div
             key={index}
-            className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'} mb-4`}
+            className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'} mb-2`}
           >
             <div
-              className={`flex items-start gap-2 max-w-[80%] p-3 rounded-lg ${
+              className={`flex items-start gap-2 max-w-[85%] p-2 rounded-lg ${
                 msg.isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
               } ${msg.isTyping ? 'skeleton' : ''}`}
             >
-              {!msg.isUser && <Bot size={20} className="mt-1" />}
-              <span className={msg.isTyping ? 'text-foreground/20' : ''}>{msg.text}</span>
+              {!msg.isUser && <Bot size={16} className="mt-1" />}
+              <span className={`text-sm ${msg.isTyping ? 'text-foreground/20' : ''}`}>{msg.text}</span>
             </div>
           </div>
         ))}
@@ -328,16 +328,16 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       </div>
 
       {error && (
-        <p className="text-destructive mb-4 text-center text-sm">{error}</p>
+        <p className="text-destructive mb-2 text-center text-sm">{error}</p>
       )}
 
       {['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory', 'riskFactors'].includes(currentStep) && (
-        <div className="mb-4">
+        <div className="mb-2">
           {currentStep === 'gender' && (
             <select
               value={patientInfo.gender}
               onChange={(e) => handleSelectSubmit('gender', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select gender</option>
               {['Male', 'Female', 'Other'].map((option) => (
@@ -349,7 +349,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <select
               value={patientInfo.durationUnit}
               onChange={(e) => handleSelectSubmit('durationUnit', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select unit</option>
               {['Days', 'Weeks', 'Months'].map((option) => (
@@ -361,7 +361,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <select
               value={patientInfo.severity}
               onChange={(e) => handleSelectSubmit('severity', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select severity</option>
               {['Mild', 'Moderate', 'Severe'].map((option) => (
@@ -373,7 +373,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <select
               value={patientInfo.travelRegion}
               onChange={(e) => handleSelectSubmit('travelRegion', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select travel region</option>
               {[...Object.keys(travelRiskFactors), 'None'].map((option) => (
@@ -387,7 +387,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
                 multiple
                 value={patientInfo.riskFactors}
                 onChange={(e) => handleSelectSubmit('riskFactors', Array.from(e.target.selectedOptions, (option) => option.value))}
-                className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 h-24 transition-all"
+                className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 h-20 transition-all"
               >
                 {Object.keys(riskFactorWeights).map((option) => (
                   <option key={option} value={option}>{option}</option>
@@ -395,7 +395,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
               </select>
               <button
                 onClick={() => handlePatientInfoChange('riskFactors', [])}
-                className="mt-2 p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90 w-full transition-all"
+                className="mt-2 p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 w-full transition-all text-sm"
               >
                 Skip (No Risk Factors)
               </button>
@@ -405,7 +405,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             <select
               value={patientInfo.drugHistory}
               onChange={(e) => handleSelectSubmit('drugHistory', e.target.value)}
-              className="w-full p-2 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="" disabled>Select drug history</option>
               {Object.keys(drugHistoryWeights).map((option) => (
@@ -417,16 +417,16 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       )}
 
       {currentStep === 'symptoms' && selectedSymptoms.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-1 mb-2">
           {selectedSymptoms.map((symptom) => (
             <div
               key={symptom}
-              className="flex items-center px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm"
+              className="flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-full text-xs"
             >
               {symptom}
               <X
-                size={16}
-                className="ml-2 cursor-pointer hover:text-destructive transition-colors"
+                size={14}
+                className="ml-1 cursor-pointer hover:text-destructive transition-colors"
                 onClick={() => removeSymptom(symptom)}
               />
             </div>
@@ -454,16 +454,16 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
                   ? 'Type "start" or "help"'
                   : `Enter ${currentStep}`
               }
-              className="w-full p-2 pr-10 border border-input rounded-[var(--radius)] bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full p-2 pr-8 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
               disabled={currentStep === 'submit'}
             />
             {currentStep === 'symptoms' && (
-              <Plus size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary" />
+              <Plus size={14} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-primary" />
             )}
           </div>
           <button
             onClick={handleInputSubmit}
-            className="p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90 disabled:opacity-50 transition-all"
+            className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-all"
             disabled={currentStep === 'submit' || !input.trim()}
           >
             <Send size={16} />
@@ -472,14 +472,14 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       )}
 
       {suggestions.length > 0 && (
-        <div className="absolute w-full max-w-3xl max-h-60 overflow-y-auto bg-popover border border-border rounded-[var(--radius)] shadow-lg mt-1 z-10">
+        <div className="absolute w-full max-w-full max-h-40 overflow-y-auto bg-popover border border-border rounded-lg shadow-lg mt-1 z-10 left-0 right-0 mx-2 sm:mx-4">
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
               className="flex items-center p-2 cursor-pointer hover:bg-muted transition-colors suggestion-highlight"
               onClick={() => (currentStep === 'symptoms' ? handleSymptomSelect(suggestion) : handlePatientInfoChange(currentStep, suggestion.text))}
             >
-              <span className={suggestion.type === 'combination' ? 'italic text-muted-foreground' : 'text-foreground'}>{suggestion.text}</span>
+              <span className={`text-sm ${suggestion.type === 'combination' ? 'italic text-muted-foreground' : 'text-foreground'}`}>{suggestion.text}</span>
             </div>
           ))}
         </div>
