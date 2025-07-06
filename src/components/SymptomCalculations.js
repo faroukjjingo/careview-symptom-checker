@@ -1,4 +1,3 @@
-// calculateDiagnosis.js
 import { symptomCombinations } from './SymptomCombinations';
 import riskFactorWeights from './RiskFactorWeights';
 import travelRiskFactors from './TravelRiskFactors';
@@ -41,7 +40,6 @@ const calculateModifiers = (data, factors) => {
 };
 
 const normalizeScore = (score, maxScore) => {
-  // Apply logarithmic scaling to prevent extreme scores
   const scaledScore = Math.log1p(score) / Math.log1p(maxScore);
   return Math.min(99, Math.max(1, scaledScore * 99));
 };
@@ -64,7 +62,6 @@ const calculateDiagnosis = async (
   riskFactors
 ) => {
   try {
-    // Validate inputs
     if (!symptoms || symptoms.length < 2) {
       return { error: 'At least two symptoms are required' };
     }
@@ -109,28 +106,26 @@ const calculateDiagnosis = async (
 
     const diseaseScores = {};
     const unmatchedSymptoms = [];
-    const maxPossibleScore = 500; // Adjusted for combined contributions
+    const maxPossibleScore = 500;
 
-    // Score symptom combinations
     const symptomSet = new Set(symptoms);
     let matchedCombination = false;
     for (const comboKey of Object.keys(symptomCombinations)) {
       const comboSymptoms = comboKey.split(', ').map((s) => s.trim());
       const intersection = comboSymptoms.filter((s) => symptomSet.has(s));
-      if (intersection.length === comboSymptoms.length) { // Require full match
+      if (intersection.length === comboSymptoms.length) {
         matchedCombination = true;
         const diseases = symptomCombinations[comboKey];
         for (const [disease, weight] of Object.entries(diseases)) {
           diseaseScores[disease] = diseaseScores[disease] || 0;
           const modifiers = calculateModifiers({ weight }, factors);
-          diseaseScores[disease] += weight * modifiers * 30; // Increased weight for combinations
+          diseaseScores[disease] += weight * modifiers * 30;
         }
       } else {
         unmatchedSymptoms.push(...intersection);
       }
     }
 
-    // Score risk factors
     for (const factor of factors.riskFactors) {
       if (riskFactorWeights[factor]) {
         const diseases = riskFactorWeights[factor];
@@ -141,7 +136,6 @@ const calculateDiagnosis = async (
       }
     }
 
-    // Score travel region
     if (factors.travelRegion && travelRiskFactors[factors.travelRegion]) {
       const diseases = travelRiskFactors[factors.travelRegion];
       for (const [disease, weight] of Object.entries(diseases)) {
@@ -150,7 +144,6 @@ const calculateDiagnosis = async (
       }
     }
 
-    // Score drug history
     if (factors.drugHistory && drugHistoryWeights[factors.drugHistory]) {
       const diseases = drugHistoryWeights[factors.drugHistory];
       for (const [disease, weight] of Object.entries(diseases)) {
@@ -159,17 +152,15 @@ const calculateDiagnosis = async (
       }
     }
 
-    // Apply red flag boost
     const hasRedFlag = symptoms.some((symptom) => redFlagSymptoms.includes(symptom));
     if (hasRedFlag) {
       for (const disease of ['heart attack', 'pulmonary embolism', 'meningitis', 'appendicitis']) {
         if (diseaseScores[disease]) {
-          diseaseScores[disease] *= 1.5; // Increased boost for urgency
+          diseaseScores[disease] *= 1.5;
         }
       }
     }
 
-    // Generate results
     let detailed = Object.entries(diseaseScores)
       .map(([disease, score]) => {
         const probability = normalizeScore(score, maxPossibleScore) / 100;
@@ -182,7 +173,6 @@ const calculateDiagnosis = async (
       })
       .sort((a, b) => b.probability - a.probability);
 
-    // Handle no matched combinations
     if (!matchedCombination) {
       return {
         detailed: [],
