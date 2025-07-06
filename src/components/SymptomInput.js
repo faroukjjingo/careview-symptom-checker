@@ -1,15 +1,15 @@
 // src/components/SymptomInput.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, X, Send, Bot } from 'lucide-react';
+import { Plus, Send, Bot } from 'lucide-react';
 import SymptomChat from './SymptomChat';
 import SymptomSelector from './SymptomSelector';
 import PatientInfoSelector from './PatientInfoSelector';
-import { symptomList } from './SymptomList';
-import { symptomCombinations } from './SymptomCombinations';
-import { travelRiskFactors } from './TravelRiskFactors';
-import { riskFactorWeights } from './RiskFactorWeights';
-import drugHistoryWeights from './DrugHistoryWeights';
-import calculateDiagnosis from './SymptomCalculations';
+import { symptomList } from '../utils/SymptomList';
+import { symptomCombinations } from '../utils/SymptomCombinations';
+import { travelRiskFactors } from '../utils/TravelRiskFactors';
+import { riskFactorWeights } from '../utils/RiskFactorWeights';
+import drugHistoryWeights from '../utils/DrugHistoryWeights';
+import calculateDiagnosis from '../utils/SymptomCalculations';
 
 const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setPatientInfo, onDiagnosisResults }) => {
   const [input, setInput] = useState('');
@@ -200,6 +200,11 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   };
 
   const handlePatientInfoChange = (field, value) => {
+    if (!steps[field].validate(value)) {
+      setError(steps[field].error);
+      addBotMessage(steps[field].error);
+      return;
+    }
     setPatientInfo((prev) => ({ ...prev, [field]: value }));
     setMessages((prev) => [
       ...prev,
@@ -326,7 +331,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4 max-h-[70vh] flex flex-col">
+    <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4 max-h-[70dvh] flex flex-col">
       <SymptomChat
         messages={messages}
         chatEndRef={chatEndRef}
@@ -359,6 +364,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
               value={input}
               onChange={handleInputChange}
               onKeyPress={handleInputSubmit}
+              onFocus={() => window.scrollTo({ top: inputRef.current.offsetTop - 100, behavior: 'smooth' })}
               placeholder={
                 currentStep === 'symptoms'
                   ? 'Type symptoms or "done"'
@@ -370,7 +376,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
                   ? 'Type "start" or "help"'
                   : `Enter ${currentStep}`
               }
-              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-sm touch-manipulation"
+              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base touch-manipulation"
               disabled={currentStep === 'submit'}
             />
             {currentStep === 'symptoms' && (
