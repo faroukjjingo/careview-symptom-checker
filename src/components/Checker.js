@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
 import DiagnosisCard from './DiagnosisCard';
-import calculateDiagnosis from './SymptomCalculations';
-import { guidance } from './guidance';
+import calculateDiagnosis from '../utils/SymptomCalculations';
+import { guidance } from '../utils/guidance';
 
 const Checker = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
@@ -74,7 +74,7 @@ const Checker = () => {
       {errorMessage && (
         <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-center">
           <p className="font-medium text-sm">{errorMessage}</p>
-          <p className="text-xs mt-1">Please consult a healthcare provider immediately for serious symptoms.</p>
+          <p className="text-sm mt-1">Please consult a healthcare provider immediately for serious symptoms.</p>
         </div>
       )}
 
