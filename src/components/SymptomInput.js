@@ -5,6 +5,7 @@ import SymptomChat from './SymptomChat';
 import SymptomSelector from './SymptomSelector';
 import PatientInfoSelector from './PatientInfoSelector';
 import BotMessages from './BotMessages';
+import ContextHandler from './ContextHandler';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
 import { travelRiskFactors } from './TravelRiskFactors';
@@ -128,7 +129,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             symptom.toLowerCase().includes(text.toLowerCase()) &&
             !selectedSymptoms.includes(symptom)
         )
-        .slice(0, 3);
+        .slice(0, 5); // Show up to 5 symptoms
 
       const combinationKeys = Object.keys(symptomCombinations);
       const filteredCombinations = combinationKeys
@@ -139,7 +140,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
             symptoms.some((symptom) => !selectedSymptoms.includes(symptom))
           );
         })
-        .slice(0, 2);
+        .slice(0, 5); // Show up to 5 combinations
 
       const combinedSuggestions = [
         ...filteredCombinations.map((combination) => ({
@@ -154,9 +155,8 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       ];
 
       setSuggestions(combinedSuggestions);
-    } else if (['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
+    } else if (['durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
       const options = {
-        gender: ['Male', 'Female', 'Other'],
         durationUnit: ['Days', 'Weeks', 'Months'],
         severity: ['Mild', 'Moderate', 'Severe'],
         travelRegion: [...Object.keys(travelRiskFactors), 'None'],
@@ -164,7 +164,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       }[currentStep];
       const filteredOptions = options
         .filter((option) => option.toLowerCase().includes(text.toLowerCase()))
-        .slice(0, 4);
+        .slice(0, 5);
       setSuggestions(filteredOptions.map((option) => ({ type: 'single', text: option })));
     } else {
       setSuggestions([]);
@@ -212,14 +212,10 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       { text: `${field.charAt(0).toUpperCase() + field.slice(1)}: ${Array.isArray(value) ? value.join(', ') || 'None' : value}`, isUser: true },
     ]);
     setCurrentStep(steps[field].next);
-    addBotMessage(getNextPrompt(steps[field].next));
+    addBotMessage(BotMessages.getStepPrompt(steps[field].next));
     setInput('');
     setSuggestions([]);
     setError('');
-  };
-
-  const getNextPrompt = (step) => {
-    return BotMessages.getStepPrompt(step);
   };
 
   const handleSubmit = async () => {
@@ -237,6 +233,18 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
     onDiagnosisResults(result);
   };
 
+  const handleDoneButton = () => {
+    if (selectedSymptoms.length < 2) {
+      setError('Please select at least two symptoms.');
+      addBotMessage('You need at least two symptoms to proceed. Please add more or select from the list.');
+    } else {
+      setCurrentStep(steps[currentStep].next);
+      addBotMessage(BotMessages.getStepPrompt(steps[currentStep].next));
+      setInput('');
+      setSuggestions([]);
+    }
+  };
+
   const handleInputSubmit = (e) => {
     if (e.key !== 'Enter' && e.type !== 'click') return;
     if (!input.trim()) return;
@@ -248,10 +256,15 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
 
     const inputLower = input.toLowerCase().trim();
 
+    // Check for context-based responses
+    if (ContextHandler.handleContext(input, currentStep, setMessages, addBotMessage, handlePatientInfoChange, setInput)) {
+      return;
+    }
+
     if (currentStep === 'welcome') {
       if (inputLower === 'start') {
         setCurrentStep('age');
-        addBotMessage(getNextPrompt('age'));
+        addBotMessage(BotMessages.getStepPrompt('age'));
       } else if (inputLower === 'help') {
         addBotMessage(BotMessages.getHelpMessage());
       } else {
@@ -260,19 +273,12 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
       setInput('');
     } else if (currentStep === 'symptoms') {
       if (inputLower === 'done') {
-        if (selectedSymptoms.length < 2) {
-          setError('Please select at least two symptoms.');
-          addBotMessage('You need at least two symptoms to proceed. Please add more or select from the list.');
-        } else {
-          setCurrentStep(steps[currentStep].next);
-          addBotMessage(getNextPrompt(steps[currentStep].next));
-          setInput('');
-        }
+        handleDoneButton();
       } else if (suggestions.length > 0) {
         handleSymptomSelect(suggestions[0]);
       } else {
         setError('Please select a valid symptom from the list.');
-        addBotMessage('That symptom isn\'t in our list. Please select one from the suggestions.');
+        addBotMessage('That symptom isn’t in our list. Please select one from the suggestions.');
         setInput('');
       }
     } else if (currentStep === 'riskFactors' && inputLower === 'none') {
@@ -287,9 +293,8 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         addBotMessage(steps[currentStep].error);
         setInput('');
       }
-    } else if (['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
+    } else if (['durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
       const options = {
-        gender: ['Male', 'Female', 'Other'],
         durationUnit: ['Days', 'Weeks', 'Months'],
         severity: ['Mild', 'Moderate', 'Severe'],
         travelRegion: [...Object.keys(travelRiskFactors), 'None'],
@@ -314,12 +319,20 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         error={error}
       />
       {currentStep === 'symptoms' && (
-        <SymptomSelector
-          selectedSymptoms={selectedSymptoms}
-          removeSymptom={removeSymptom}
-          suggestions={suggestions}
-          handleSymptomSelect={handleSymptomSelect}
-        />
+        <div>
+          <SymptomSelector
+            selectedSymptoms={selectedSymptoms}
+            removeSymptom={removeSymptom}
+            suggestions={suggestions}
+            handleSymptomSelect={handleSymptomSelect}
+          />
+          <button
+            onClick={handleDoneButton}
+            className="mt-2 p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90"
+          >
+            Done
+          </button>
+        </div>
       )}
       {['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
         <PatientInfoSelector
@@ -343,7 +356,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
               onFocus={() => window.scrollTo({ top: inputRef.current.offsetTop - 100, behavior: 'smooth' })}
               placeholder={
                 currentStep === 'symptoms'
-                  ? 'Type symptoms or "done"'
+                  ? 'Type symptoms or select from list'
                   : currentStep === 'riskFactors'
                   ? 'Type "none" or select from list'
                   : currentStep === 'travelRegion'
