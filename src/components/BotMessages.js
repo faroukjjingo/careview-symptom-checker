@@ -1984,6 +1984,7 @@ welcomeMessages: [
     'Thanks for the feedback. Let’s keep going with: {stepPrompt}',
     'I appreciate your input. Please continue with: {stepPrompt}',
   ],
+},
 
   getWelcomeMessage: () => {
     return BotMessages.welcomeMessages[Math.floor(Math.random() * BotMessages.welcomeMessages.length)];
