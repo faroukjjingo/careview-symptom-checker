@@ -18,14 +18,26 @@ const PatientInfoSelector = ({
     drugHistory: Object.keys(drugHistoryWeights),
   };
 
+  const handleRiskFactorToggle = (option) => {
+    const currentRiskFactors = patientInfo.riskFactors || [];
+    const updatedRiskFactors = currentRiskFactors.includes(option)
+      ? currentRiskFactors.filter((factor) => factor !== option)
+      : [...currentRiskFactors, option];
+    handlePatientInfoChange('riskFactors', updatedRiskFactors);
+  };
+
   const renderButtons = (step) => (
     <div className="flex flex-wrap gap-2">
       {options[step].map((option) => (
         <button
           key={option}
-          onClick={() => handlePatientInfoChange(step, step === 'riskFactors' ? [option] : option)}
+          onClick={() => (step === 'riskFactors' ? handleRiskFactorToggle(option) : handlePatientInfoChange(step, option))}
           className={`p-2 rounded-lg ${
-            (step === 'riskFactors' ? patientInfo.riskFactors.includes(option) : patientInfo[step] === option)
+            step === 'riskFactors'
+              ? patientInfo.riskFactors.includes(option)
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
+              : patientInfo[step] === option
               ? 'bg-primary text-primary-foreground'
               : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
           } transition-all text-base`}
@@ -46,8 +58,23 @@ const PatientInfoSelector = ({
 
   return (
     <div className="mb-3">
-      {['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) &&
-        renderButtons(currentStep)}
+      {['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors'].includes(currentStep) && renderButtons(currentStep)}
+      {currentStep === 'drugHistory' && (
+        <select
+          value={patientInfo.drugHistory}
+          onChange={(e) => handlePatientInfoChange('drugHistory', e.target.value)}
+          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
+        >
+          <option value="" disabled>
+            Select drug history
+          </option>
+          {options.drugHistory.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 };
