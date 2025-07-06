@@ -2,6 +2,7 @@
 import BotMessages from './BotMessages';
 
 const steps = [
+  { name: 'welcome', validate: (value) => ['start', 'help'].includes(value.toLowerCase()) },
   { name: 'gender', validate: (value) => ['Male', 'Female', 'Other'].includes(value) },
   { name: 'symptoms', validate: (value) => typeof value === 'string' && value.trim().length > 0 },
   { name: 'age', validate: (value) => !isNaN(value) && value > 0 && value <= 120 },
@@ -48,11 +49,28 @@ const ContextHandler = {
     feedbackOrComplaints: ['this is', 'not working', 'issue', 'problem', 'sucks'],
   },
 
-  handleContext(input, currentStep, setMessages, addBotMessage, handlePatientInfoChange, setInput, patientInfo) {
+  handleContext(input, currentStep, setMessages, addBotMessage, handlePatientInfoChange, setInput, setCurrentStep, patientInfo) {
     const inputLower = input.toLowerCase().trim();
     const currentStepConfig = steps.find((step) => step.name === currentStep);
 
-    // Handle direct step-specific inputs first
+    // Handle 'start' or 'help' in welcome step
+    if (currentStep === 'welcome') {
+      if (inputLower === 'start') {
+        setCurrentStep('gender');
+        addBotMessage(BotMessages.getStepPrompt('gender'));
+        setInput('');
+        return true;
+      } else if (inputLower === 'help') {
+        addBotMessage(BotMessages.getHelpMessage());
+        setInput('');
+        return true;
+      }
+      addBotMessage(BotMessages.getWelcomeMessage());
+      setInput('');
+      return true;
+    }
+
+    // Handle direct step-specific inputs
     if (currentStepConfig && currentStepConfig.validate) {
       let value = inputLower;
       if (currentStep === 'age' || currentStep === 'duration') {
@@ -87,8 +105,16 @@ const ContextHandler = {
       if (value !== null && currentStepConfig.validate(value, patientInfo[currentStep + 'Weights'] || patientInfo.travelRiskFactors)) {
         handlePatientInfoChange(currentStep, value);
         setInput('');
-        if (currentStep !== 'symptoms' && currentStep !== 'riskFactors') {
-          setMessages((prev) => [...prev, { role: 'bot', content: BotMessages.getStepPrompt(steps[steps.findIndex((s) => s.name === currentStep) + 1]?.name || 'submit') }]);
+        if (currentStep === 'submit') {
+          addBotMessage(BotMessages.getStepPrompt('submit'));
+        } else if (currentStep !== 'symptoms' && currentStep !== 'riskFactors') {
+          const nextStep = steps[steps.findIndex((s) => s.name === currentStep) + 1]?.name;
+          if (nextStep) {
+            setCurrentStep(nextStep);
+            addBotMessage(BotMessages.getStepPrompt(nextStep));
+          }
+        } else if (currentStep === 'symptoms') {
+          addBotMessage(BotMessages.getSymptomPrompt());
         }
         return true;
       }
@@ -189,6 +215,29 @@ const ContextHandler = {
             response = BotMessages.getErrorResponse(currentStep);
         }
         addBotMessage(response);
+        setInput('');
+        return true;
+      }
+    }
+
+    // Handle symptoms specifically
+    if (currentStep === 'symptoms' && inputLower !== 'done') {
+      handlePatientInfoChange('symptoms', [...(patientInfo.symptoms || []), inputLower]);
+      addBotMessage(BotMessages.getSymptomPrompt());
+      setInput('');
+      return true;
+    }
+
+    // Handle 'done' for symptoms
+    if (currentStep === 'symptoms' && inputLower === 'done') {
+      if ((patientInfo.symptoms || []).length >= 2) {
+        const nextStep = steps[steps.findIndex((s) => s.name === currentStep) + 1]?.name;
+        setCurrentStep(nextStep);
+        addBotMessage(BotMessages.getStepPrompt(nextStep));
+        setInput('');
+        return true;
+      } else {
+        addBotMessage('Please provide at least two symptoms before typing "done".');
         setInput('');
         return true;
       }
