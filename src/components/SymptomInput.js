@@ -16,6 +16,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
     { text: "Hello! I'm CareView, here to help you explore possible diagnoses. Let's start with your age. How old are you?", isUser: false },
   ]);
   const chatEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   const steps = {
     welcome: { next: 'age', validate: () => true, error: '' },
@@ -33,6 +34,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    inputRef.current?.focus();
   }, [messages]);
 
   useEffect(() => {
@@ -90,7 +92,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         gender: ['Male', 'Female', 'Other'],
         durationUnit: ['Days', 'Weeks', 'Months'],
         severity: ['Mild', 'Moderate', 'Severe'],
-        travelRegion: Object.keys(travelRiskFactors),
+        travelRegion: [...Object.keys(travelRiskFactors), 'None'],
         drugHistory: Object.keys(drugHistoryWeights),
       }[currentStep];
       const filteredOptions = options
@@ -196,6 +198,13 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
 
   const handleInputSubmit = (e) => {
     if (e.key === 'Enter' || e.type === 'click') {
+      if (!input.trim()) return;
+
+      setMessages((prev) => [
+        ...prev,
+        { text: input, isUser: true },
+      ]);
+
       if (currentStep === 'symptoms') {
         if (input.toLowerCase() === 'done') {
           if (selectedSymptoms.length < 2) {
@@ -207,7 +216,6 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           } else {
             setMessages((prev) => [
               ...prev,
-              { text: 'Done', isUser: true },
               { text: getNextPrompt(steps[currentStep].next), isUser: false },
             ]);
             setCurrentStep(steps[currentStep].next);
@@ -215,6 +223,12 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           }
         } else if (suggestions.length > 0) {
           handleSymptomSelect(suggestions[0]);
+        } else {
+          setError('Please select a symptom from the list.');
+          setMessages((prev) => [
+            ...prev,
+            { text: 'Please select a symptom from the list.', isUser: false },
+          ]);
         }
       } else if (currentStep === 'riskFactors' && input.toLowerCase() === 'none') {
         handlePatientInfoChange('riskFactors', []);
@@ -253,6 +267,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           ]);
         }
       }
+      setInput('');
     }
   };
 
@@ -261,7 +276,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
   };
 
   return (
-    <div className="max-w-xl mx-auto p-0 h-[70vh] flex flex-col">
+    <div className="max-w-xl mx-auto p-4 h-[70vh] flex flex-col">
       <div className="flex-1 overflow-y-auto p-4 bg-background border border-border rounded-[var(--radius)] mb-4">
         {messages.map((msg, index) => (
           <div
@@ -391,6 +406,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
         <div className="flex items-end gap-2">
           <div className="relative flex-1">
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={handleInputChange}
@@ -413,8 +429,8 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           </div>
           <button
             onClick={handleInputSubmit}
-            className="p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90"
-            disabled={currentStep === 'submit'}
+            className="p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90 disabled:opacity-50"
+            disabled={currentStep === 'submit' || !input.trim()}
           >
             <Send size={16} />
           </button>
