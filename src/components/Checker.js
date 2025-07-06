@@ -1,8 +1,9 @@
+// src/components/Checker.jsx
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
 import DiagnosisCard from './DiagnosisCard';
-import calculateDiagnosis from './SymptomCalculations';
-import { guidance } from './guidance';
+import calculateDiagnosis from '../utils/SymptomCalculations';
+import { guidance } from '../utils/guidance';
 
 const Checker = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
@@ -56,10 +57,10 @@ const Checker = () => {
   }, [isAnalyzing]);
 
   return (
-<div className="min-h-screen w-full px-1 py-1">
-      <div className="mb-2 text-center">
-        <h1 className="text-xl font-bold text-primary">CareView Symptom Checker</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">Developed by trusted healthcare professionals to explore possible diagnoses. Always consult a doctor for medical advice.</p>
+    <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
+      <div className="text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold text-primary">CareView Symptom Checker</h1>
+        <p className="text-sm text-muted-foreground mt-2">Developed by trusted healthcare professionals to explore possible diagnoses. Always consult a doctor for medical advice.</p>
       </div>
 
       <SymptomInput 
@@ -71,21 +72,21 @@ const Checker = () => {
       />
 
       {errorMessage && (
-        <div className="mt-1 p-2 bg-destructive/10 text-destructive rounded-lg text-center">
-          <p className="font-medium text-xs">{errorMessage}</p>
-          <p className="text-xs mt-0.5">Please consult a healthcare provider immediately for serious symptoms.</p>
+        <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-center">
+          <p className="font-medium text-sm">{errorMessage}</p>
+          <p className="text-xs mt-1">Please consult a healthcare provider immediately for serious symptoms.</p>
         </div>
       )}
 
       {diagnosis.length > 0 && (
-        <div className="mt-2">
-          <h2 className="text-lg font-semibold text-primary mb-1">Possible Diagnoses</h2>
+        <div className="space-y-4">
+          <h2 className="text-xl sm:text-2xl font-semibold text-primary">Possible Diagnoses</h2>
           {isAnalyzing ? (
-            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-              <div className="w-5 h-5 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+              <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
               <div className="flex-1">
-                <p className="text-xs text-muted-foreground">Analyzing your symptoms...</p>
-                <div className="w-full h-1.5 bg-background rounded-full overflow-hidden mt-1">
+                <p className="text-sm text-muted-foreground">Analyzing your symptoms...</p>
+                <div className="w-full h-2 bg-background rounded-full overflow-hidden mt-2">
                   <div
                     className="h-full bg-primary transition-all duration-300"
                     style={{ width: `${analysisProgress}%` }}
@@ -94,7 +95,7 @@ const Checker = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {diagnosis.map((diag, index) => (
                 <DiagnosisCard
                   key={index}
