@@ -461,7 +461,7 @@ const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setP
           <button
             onClick={handleInputSubmit}
             className="p-2 bg-primary text-primary-foreground rounded-[var(--radius)] hover:bg-primary/90 disabled:opacity-50 transition-all"
-            disabled={currentstep === 'submit' || !input.trim()}
+            disabled={currentStep === 'submit' || !input.trim()}
           >
             <Send size={16} />
           </button>
