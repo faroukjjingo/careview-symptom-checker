@@ -1,20 +1,6 @@
 // src/components/ContextHandler.js
 import BotMessages from './BotMessages';
 
-const steps = [
-  { name: 'welcome', validate: (value) => ['start', 'help'].includes(value.toLowerCase()) },
-  { name: 'age', validate: (value) => !isNaN(value) && value > 0 && value <= 120 },
-  { name: 'gender', validate: (value) => ['male', 'female', 'other'].includes(value.toLowerCase()) },
-  { name: 'symptoms', validate: (value) => Array.isArray(value) && value.length >= 2 },
-  { name: 'duration', validate: (value) => !isNaN(value) && value > 0 },
-  { name: 'durationUnit', validate: (value) => ['days', 'weeks', 'months'].includes(value.toLowerCase()) },
-  { name: 'severity', validate: (value) => ['mild', 'moderate', 'severe'].includes(value.toLowerCase()) },
-  { name: 'travelRegion', validate: (value, travelRiskFactors) => [...Object.keys(travelRiskFactors || {}), 'none'].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
-  { name: 'riskFactors', validate: (value, riskFactorWeights) => Array.isArray(value) && (value.length === 0 || value.every((v) => Object.keys(riskFactorWeights || {}).includes(v))) },
-  { name: 'drugHistory', validate: (value, drugHistoryWeights) => ['none', ...Object.keys(drugHistoryWeights || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
-  { name: 'submit', validate: () => true },
-];
-
 const ContextHandler = {
   contexts: {
     greetings: ['hi', 'hello', 'hey', 'good morning', 'good evening', 'good afternoon'],
@@ -49,105 +35,9 @@ const ContextHandler = {
     feedbackOrComplaints: ['this is', 'not working', 'issue', 'problem', 'sucks'],
   },
 
-  handleContext(input, currentStep, setMessages, addBotMessage, handlePatientInfoChange, setInput, setCurrentStep, patientInfo) {
+  handleContext(input, currentStep, setMessages, addBotMessage, setInput) {
     const inputLower = input.toLowerCase().trim();
-    const currentStepConfig = steps.find((step) => step.name === currentStep);
-    const stepIndex = steps.findIndex((s) => s.name === currentStep);
-    const nextStep = steps[stepIndex + 1]?.name;
-
-    // Handle 'welcome' step
-    if (currentStep === 'welcome') {
-      if (inputLower === 'start') {
-        setCurrentStep('age');
-        addBotMessage(BotMessages.getStepPrompt('age'));
-        setInput('');
-        return true;
-      } else if (inputLower === 'help') {
-        addBotMessage(BotMessages.getHelpMessage());
-        setInput('');
-        return true;
-      }
-      addBotMessage(BotMessages.getInvalidWelcomeMessage());
-      setInput('');
-      return true;
-    }
-
-    // Handle 'done' for symptoms
-    if (currentStep === 'symptoms' && inputLower === 'done') {
-      if ((patientInfo.symptoms || []).length >= 2) {
-        setCurrentStep(nextStep || 'duration');
-        addBotMessage(BotMessages.getStepPrompt(nextStep || 'duration'));
-        setInput('');
-        return true;
-      } else {
-        addBotMessage('Please provide at least two symptoms before typing "done".');
-        setInput('');
-        return true;
-      }
-    }
-
-    // Handle direct step-specific inputs
-    if (currentStepConfig && currentStepConfig.validate) {
-      let value = inputLower;
-      if (currentStep === 'age' || currentStep === 'duration') {
-        const numberMatch = inputLower.match(/\d+/);
-        value = numberMatch ? parseInt(numberMatch[0], 10) : null;
-      } else if (currentStep === 'gender') {
-        value = ['male', 'female', 'other']
-          .find((v) => inputLower.includes(v)) || value;
-        value = value.charAt(0).toUpperCase() + value.slice(1);
-      } else if (currentStep === 'durationUnit') {
-        value = ['days', 'weeks', 'months']
-          .find((v) => inputLower.includes(v)) || value;
-        value = value.charAt(0).toUpperCase() + value.slice(1);
-      } else if (currentStep === 'severity') {
-        value = ['mild', 'moderate', 'severe']
-          .find((v) => inputLower.includes(v)) || value;
-        value = value.charAt(0).toUpperCase() + value.slice(1);
-      } else if (currentStep === 'travelRegion' && inputLower === 'none') {
-        value = 'None';
-      } else if (currentStep === 'travelRegion') {
-        value = Object.keys(patientInfo.travelRiskFactors || {})
-          .find((v) => inputLower.includes(v.toLowerCase())) || value;
-        value = value.charAt(0).toUpperCase() + value.slice(1);
-      } else if (currentStep === 'riskFactors' && (inputLower === 'skip' || inputLower === 'none')) {
-        value = [];
-      } else if (currentStep === 'riskFactors') {
-        const riskMatch = Object.keys(patientInfo.riskFactorWeights || {})
-          .find((risk) => inputLower.includes(risk.toLowerCase()));
-        if (riskMatch) {
-          const currentRiskFactors = patientInfo.riskFactors || [];
-          value = currentRiskFactors.includes(riskMatch) ? currentRiskFactors : [...currentRiskFactors, riskMatch];
-        }
-      } else if (currentStep === 'drugHistory' && (inputLower === 'skip' || inputLower === 'none')) {
-        value = 'None';
-      } else if (currentStep === 'drugHistory') {
-        value = Object.keys(patientInfo.drugHistoryWeights || {})
-          .find((drug) => inputLower.includes(drug.toLowerCase())) || value;
-      } else if (currentStep === 'submit' && ['submit', 'done', 'finish'].includes(inputLower)) {
-        value = true;
-      } else if (currentStep === 'symptoms') {
-        value = [...(patientInfo.symptoms || []), inputLower];
-      }
-
-      if (value !== null && currentStepConfig.validate(value, patientInfo[currentStep + 'Weights'] || patientInfo.travelRiskFactors)) {
-        handlePatientInfoChange(currentStep, value);
-        setInput('');
-        if (currentStep === 'submit') {
-          addBotMessage(BotMessages.getStepPrompt('submit'));
-        } else if (currentStep !== 'symptoms' && currentStep !== 'riskFactors') {
-          if (nextStep) {
-            setCurrentStep(nextStep);
-            addBotMessage(BotMessages.getStepPrompt(nextStep));
-          }
-        } else {
-          addBotMessage(BotMessages.getSymptomPrompt());
-        }
-        return true;
-      }
-    }
-
-    // Handle contextual inputs
+    
     for (const [context, keywords] of Object.entries(ContextHandler.contexts)) {
       if (keywords.some((keyword) => inputLower.includes(keyword))) {
         let response;
@@ -165,13 +55,13 @@ const ContextHandler = {
             response = BotMessages.getApologyResponse(currentStep);
             break;
           case 'symptomDescription':
-            response = currentStep === 'symptoms' ? BotMessages.getSymptomPrompt() : BotMessages.getSymptomDescriptionResponse(currentStep);
+            response = BotMessages.getSymptomDescriptionResponse(currentStep);
             break;
           case 'durationOfSymptoms':
-            response = ['duration', 'durationUnit'].includes(currentStep) ? BotMessages.getStepPrompt(currentStep) : BotMessages.getDurationResponse(currentStep);
+            response = BotMessages.getDurationResponse(currentStep);
             break;
           case 'severityOfSymptoms':
-            response = currentStep === 'severity' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getSeverityResponse(currentStep);
+            response = BotMessages.getSeverityResponse(currentStep);
             break;
           case 'locationOfSymptoms':
             response = BotMessages.getLocationResponse(currentStep);
@@ -186,27 +76,27 @@ const ContextHandler = {
             response = BotMessages.getRelievingWorseningResponse(currentStep);
             break;
           case 'associatedSymptoms':
-            response = currentStep === 'symptoms' ? BotMessages.getSymptomPrompt() : BotMessages.getAssociatedSymptomsResponse(currentStep);
+            response = BotMessages.getAssociatedSymptomsResponse(currentStep);
             break;
           case 'medicalHistory':
           case 'medicationUse':
-            response = currentStep === 'drugHistory' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getMedicationUseResponse(currentStep);
+            response = BotMessages.getMedicationUseResponse(currentStep);
             break;
           case 'allergies':
             response = BotMessages.getAllergiesResponse(currentStep);
             break;
           case 'age':
-            response = currentStep === 'age' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getAgeResponse(currentStep);
+            response = BotMessages.getAgeResponse(currentStep);
             break;
           case 'gender':
-            response = currentStep === 'gender' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getGenderResponse(currentStep);
+            response = BotMessages.getGenderResponse(currentStep);
             break;
           case 'pregnancyStatus':
             response = BotMessages.getPregnancyResponse(currentStep);
             break;
           case 'lifestyleFactors':
           case 'recentExposure':
-            response = currentStep === 'riskFactors' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getLifestyleResponse(currentStep);
+            response = BotMessages.getLifestyleResponse(currentStep);
             break;
           case 'chronicConditions':
             response = BotMessages.getChronicConditionsResponse(currentStep);
@@ -215,10 +105,10 @@ const ContextHandler = {
             response = BotMessages.getFamilyHistoryResponse(currentStep);
             break;
           case 'recentTravel':
-            response = currentStep === 'travelRegion' ? BotMessages.getStepPrompt(currentStep) : BotMessages.getRecentTravelResponse(currentStep);
+            response = BotMessages.getRecentTravelResponse(currentStep);
             break;
           case 'vaccinationStatus':
-            response = BotMessages.getVaccinationResponse(currentStep);
+            response = BotMessages.getVaccinationStatusResponse(currentStep);
             break;
           case 'mentalHealthSymptoms':
             response = BotMessages.getMentalHealthResponse(currentStep);
@@ -247,10 +137,7 @@ const ContextHandler = {
       }
     }
 
-    // Fallback for unrecognized input
-    addBotMessage(BotMessages.getErrorResponse(currentStep));
-    setInput('');
-    return true;
+    return false;
   },
 };
 
