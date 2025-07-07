@@ -17,10 +17,11 @@ export const SymptomCheckerProvider = ({ children, initialPatientInfo }) => {
     travelRegion: '',
     riskFactors: [],
     drugHistory: [],
+    symptoms: [],
     ...initialPatientInfo,
   });
   const [messages, setMessages] = useState([
-    { role: 'bot', content: 'Hi there! I’m Dr. Jjingo, your symptom checker assistant. Type "start" to begin or "help" for guidance.', isTyping: false }
+    { role: 'bot', content: BotMessages.getWelcomeMessage(), isTyping: false }
   ]);
   const [currentStep, setCurrentStep] = useState('welcome');
   const [diagnosis, setDiagnosis] = useState([]);
