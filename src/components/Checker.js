@@ -1,9 +1,13 @@
 // src/components/Checker.jsx
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
+import SymptomChat from './SymptomChat';
 import DiagnosisCard from './DiagnosisCard';
 import calculateDiagnosis from './SymptomCalculations';
 import { guidance } from './guidance';
+import { travelRiskFactors } from './TravelRiskFactors';
+import { riskFactorWeights } from './RiskFactorWeights';
+import drugHistoryWeights from './DrugHistoryWeights';
 
 const Checker = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
@@ -16,38 +20,59 @@ const Checker = () => {
     travelRegion: '',
     riskFactors: [],
     drugHistory: '',
+    travelRiskFactors,
+    riskFactorWeights,
+    drugHistoryWeights,
   });
+  const [messages, setMessages] = useState([{ role: 'bot', content: 'Hi there! I’m Dr. Jjingo, your symptom checker assistant. Type "start" to begin or "help" for guidance.', isTyping: false }]);
   const [diagnosis, setDiagnosis] = useState([]);
   const [errorMessage, setError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expandedCard, setExpandedCard] = useState(null);
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [displayedDiagnosis, setDisplayedDiagnosis] = useState([]);
+  const [typingIndex, setTypingIndex] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
 
   const handleDiagnosisResults = (result) => {
     if (result.error) {
       setError(result.error);
       setDiagnosis([]);
+      setDisplayedDiagnosis([]);
       setIsAnalyzing(false);
       return;
     }
-    simulateAnalysis(result);
+    setDiagnosis(result.detailed || []);
+    simulateAnalysis(result.detailed || []);
   };
 
   const simulateAnalysis = (result) => {
     setAnalysisProgress(0);
+    setIsAnalyzing(true);
     const interval = setInterval(() => {
       setAnalysisProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
           setIsAnalyzing(false);
-          setDiagnosis(result.detailed);
-          if (result.redFlag) setError(result.redFlag);
+          setIsTyping(true);
           return 100;
         }
         return prev + 5;
       });
     }, 100);
   };
+
+  useEffect(() => {
+    if (isTyping && diagnosis.length > 0 && typingIndex < diagnosis.length) {
+      const timer = setTimeout(() => {
+        setDisplayedDiagnosis((prev) => [...prev, diagnosis[typingIndex]]);
+        setTypingIndex((prev) => prev + 1);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else if (typingIndex >= diagnosis.length) {
+      setIsTyping(false);
+    }
+  }, [isTyping, typingIndex, diagnosis]);
 
   useEffect(() => {
     document.body.style.cursor = isAnalyzing ? 'wait' : 'default';
@@ -63,20 +88,20 @@ const Checker = () => {
         <p className="text-sm text-muted-foreground mt-2">Developed by trusted healthcare professionals to explore possible diagnoses. Always consult a doctor for medical advice.</p>
       </div>
 
-      <SymptomInput 
+      <SymptomChat messages={messages} error={errorMessage} />
+
+      <SymptomInput
         selectedSymptoms={selectedSymptoms}
         setSelectedSymptoms={setSelectedSymptoms}
         patientInfo={patientInfo}
         setPatientInfo={setPatientInfo}
         onDiagnosisResults={handleDiagnosisResults}
+        messages={messages}
+        setMessages={setMessages}
+        travelRiskFactors={travelRiskFactors}
+        riskFactorWeights={riskFactorWeights}
+        drugHistoryWeights={drugHistoryWeights}
       />
-
-      {errorMessage && (
-        <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-center">
-          <p className="font-medium text-sm">{errorMessage}</p>
-          <p className="text-sm mt-1">Please consult a healthcare provider immediately for serious symptoms.</p>
-        </div>
-      )}
 
       {diagnosis.length > 0 && (
         <div className="space-y-4">
@@ -96,7 +121,7 @@ const Checker = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {diagnosis.map((diag, index) => (
+              {displayedDiagnosis.map((diag, index) => (
                 <DiagnosisCard
                   key={index}
                   diagnosis={diag.diagnosis}
@@ -109,6 +134,9 @@ const Checker = () => {
                   guidance={guidance[diag.diagnosis.toLowerCase()]}
                 />
               ))}
+              {isTyping && (
+                <div className="text-sm text-muted-foreground italic">Generating more diagnoses...</div>
+              )}
             </div>
           )}
         </div>
