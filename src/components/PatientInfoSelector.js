@@ -19,25 +19,6 @@ const PatientInfoSelector = ({
     drugHistory: ['None', ...Object.keys(drugHistoryWeights)].sort((a, b) => a.localeCompare(b)),
   };
 
-  const handleSelect = (value) => {
-    if (!value) return;
-
-    if (currentStep === 'riskFactors') {
-      const currentRiskFactors = patientInfo.riskFactors || [];
-      const newRiskFactors = currentRiskFactors.includes(value)
-        ? currentRiskFactors
-        : [...currentRiskFactors, value];
-      handlePatientInfoChange('riskFactors', newRiskFactors);
-    } else {
-      handlePatientInfoChange(currentStep, value.charAt(0).toUpperCase() + value.slice(1));
-      const stepIndex = steps.findIndex((s) => s.name === currentStep);
-      const nextStep = steps[stepIndex + 1]?.name;
-      if (nextStep) {
-        setCurrentStep(nextStep);
-      }
-    }
-  };
-
   const steps = [
     { name: 'welcome', validate: (value) => ['start', 'help'].includes(value.toLowerCase()) },
     { name: 'age', validate: (value) => !isNaN(value) && value > 0 && value <= 120 },
@@ -52,6 +33,30 @@ const PatientInfoSelector = ({
     { name: 'submit', validate: () => true },
   ];
 
+  const handleSelect = (value) => {
+    if (!value) return;
+
+    if (currentStep === 'riskFactors') {
+      const currentRiskFactors = patientInfo.riskFactors || [];
+      const newRiskFactors = currentRiskFactors.includes(value)
+        ? currentRiskFactors
+        : [...currentRiskFactors, value];
+      handlePatientInfoChange('riskFactors', newRiskFactors);
+    } else {
+      handlePatientInfoChange(currentStep, value);
+      const stepIndex = steps.findIndex((s) => s.name === currentStep);
+      const nextStep = steps[stepIndex + 1]?.name;
+      if (nextStep) {
+        setCurrentStep(nextStep);
+      }
+    }
+  };
+
+  const handleRemoveRiskFactor = (risk) => {
+    const updatedRiskFactors = patientInfo.riskFactors.filter((r) => r !== risk);
+    handlePatientInfoChange('riskFactors', updatedRiskFactors);
+  };
+
   return (
     <div className="space-y-2">
       {currentStep !== 'age' && currentStep !== 'duration' && (
@@ -60,27 +65,28 @@ const PatientInfoSelector = ({
             <button
               key={index}
               onClick={() => handleSelect(option)}
-              className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
+              className={`p-2 rounded-lg text-sm transition-all ${
+                patientInfo[currentStep] === option || (currentStep === 'riskFactors' && patientInfo.riskFactors.includes(option))
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
+              }`}
             >
               {option}
             </button>
           ))}
         </div>
       )}
-      {currentStep === 'riskFactors' && (
+      {currentStep === 'riskFactors' && patientInfo.riskFactors.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {(patientInfo.riskFactors || []).map((risk, index) => (
+          {patientInfo.riskFactors.map((risk, index) => (
             <span
               key={index}
-              className="p-2 bg-secondary text-secondary-foreground rounded-lg text-sm"
+              className="p-2 bg-primary text-primary-foreground rounded-lg text-sm flex items-center"
             >
               {risk}
               <button
-                onClick={() => {
-                  const updatedRiskFactors = patientInfo.riskFactors.filter((r) => r !== risk);
-                  handlePatientInfoChange('riskFactors', updatedRiskFactors);
-                }}
-                className="ml-2 text-red-500 hover:text-red-700"
+                onClick={() => handleRemoveRiskFactor(risk)}
+                className="ml-2 text-primary-foreground hover:text-red-500"
               >
                 ×
               </button>
@@ -104,7 +110,7 @@ const PatientInfoSelector = ({
           }}
           className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
         >
-          Skip
+          {currentStep === 'riskFactors' ? 'Done' : 'Skip'}
         </button>
       )}
     </div>
