@@ -1,49 +1,57 @@
-// src/components/DiagnosisCard.jsx
-import React from 'react';
-import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import React, { useContext } from 'react';
+import { SymptomCheckerContext } from '../context/SymptomCheckerContext';
 
-const DiagnosisCard = ({ diagnosis, probability, confidence, index, isExpanded, onToggle, explanation, guidance }) => {
+const DiagnosisCard = ({ guidance }) => {
+  const { diagnosis, isAnalyzing, analysisProgress, displayedDiagnosis, isTyping, expandedCard, setExpandedCard } = useContext(SymptomCheckerContext);
+
   return (
-    <div className="rounded-lg shadow-lg bg-card border border-border transition-all duration-200 hover:shadow-xl">
-      <div
-        className="flex justify-between items-center p-4 cursor-pointer hover:bg-muted/50"
-        onClick={() => onToggle(index)}
-      >
-        <h3 className="text-lg font-semibold text-card-foreground">{diagnosis}</h3>
-        <div className="flex items-center gap-4">
-          <span
-            className={`px-3 py-1 rounded-full text-sm font-medium text-white ${
-              confidence === 'High' ? 'bg-green-600' :
-              confidence === 'Medium' ? 'bg-yellow-600' : 'bg-red-600'
-            }`}
-          >
-            {confidence} Confidence
-          </span>
-          <span className="text-sm text-muted-foreground">{probability}% Likely</span>
-          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </div>
-      </div>
-      {isExpanded && (
-        <div className="p-4 border-t border-border bg-card/50">
-          <div className="mb-4">
-            <h4 className="text-base font-semibold text-primary mb-2">Why This Diagnosis?</h4>
-            <p className="text-sm text-muted-foreground prose">{explanation}</p>
-          </div>
-          {guidance ? (
-            <div>
-              <h4 className="text-base font-semibold text-primary mb-2">Next Steps</h4>
-              <p className="text-sm text-muted-foreground mb-2"><strong>Recommended Actions:</strong> {guidance.steps}</p>
-              <div className="text-sm text-muted-foreground prose" dangerouslySetInnerHTML={{ __html: guidance.content.replace(/\n/g, '<br />') }} />
+    <>
+      {diagnosis.length > 0 && (
+        <>
+          {isAnalyzing ? (
+            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+              <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Analyzing your symptoms...</p>
+                <div className="w-full h-2 bg-background rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${analysisProgress}%` }}
+                  ></div>
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="flex items-start gap-2 text-sm text-muted-foreground italic">
-              <AlertCircle size={16} className="mt-1" />
-              <p>No specific guidance available for {diagnosis}. Please consult a healthcare provider for a thorough evaluation.</p>
+            <div className="space-y-3">
+              {displayedDiagnosis.map((diag, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-card border border-border rounded-lg"
+                >
+                  <div
+                    className="flex justify-between items-center cursor-pointer"
+                    onClick={() => setExpandedCard(expandedCard === index ? null : index)}
+                  >
+                    <h3 className="text-lg font-semibold">{diag.diagnosis}</h3>
+                    <span>{`${(diag.probability * 100).toFixed(1)}%`}</span>
+                  </div>
+                  {expandedCard === index && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      <p><strong>Confidence:</strong> {(diag.confidence * 100).toFixed(1)}%</p>
+                      <p><strong>Explanation:</strong> {diag.explanation}</p>
+                      <p><strong>Guidance:</strong> {guidance[diag.diagnosis.toLowerCase()] || 'Consult a healthcare professional.'}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {isTyping && (
+                <div className="text-sm text-muted-foreground italic">Generating more diagnoses...</div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
-    </div>
+    </>
   );
 };
 
