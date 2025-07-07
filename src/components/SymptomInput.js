@@ -1,98 +1,126 @@
 // src/components/SymptomInput.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Send } from 'lucide-react';
+import { Plus, Send } from 'lucide-react';
+import SymptomChat from './SymptomChat';
+import SymptomSelector from './SymptomSelector';
 import PatientInfoSelector from './PatientInfoSelector';
 import BotMessages from './BotMessages';
-import ContextHandler from './ContextHandler';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
-import { drugOptions } from './DrugOptions';
+import { travelRiskFactors } from './TravelRiskFactors';
+import { riskFactorWeights } from './RiskFactorWeights';
+import drugHistoryWeights from './DrugHistoryWeights';
 import calculateDiagnosis from './SymptomCalculations';
 
-const steps = [
-  { name: 'welcome', validate: (value) => ['start', 'help'].includes(value.toLowerCase()) },
-  { name: 'age', validate: (value) => !isNaN(value) && value > 0 && value <= 120 },
-  { name: 'gender', validate: (value) => ['male', 'female', 'other'].includes(value.toLowerCase()) },
-  { name: 'symptoms', validate: (value) => Array.isArray(value) && value.length >= 2 },
-  { name: 'duration', validate: (value) => !isNaN(value) && value > 0 },
-  { name: 'durationUnit', validate: (value) => ['days', 'weeks', 'months'].includes(value.toLowerCase()) },
-  { name: 'severity', validate: (value) => ['mild', 'moderate', 'severe'].includes(value.toLowerCase()) },
-  { name: 'travelRegion', validate: (value, travelRiskFactors) => ['none', ...Object.keys(travelRiskFactors || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
-  { name: 'riskFactors', validate: (value, riskFactorWeights) => Array.isArray(value) && (value.length === 0 || value.every((v) => Object.keys(riskFactorWeights || {}).includes(v))) },
-  { name: 'drugHistory', validate: (value, drugOptions) => Array.isArray(value) && (value.length === 0 || value.every((v) => drugOptions.includes(v))) },
-  { name: 'submit', validate: () => true },
-];
-
-const SymptomInput = ({
-  selectedSymptoms,
-  setSelectedSymptoms,
-  patientInfo,
-  setPatientInfo,
-  onDiagnosisResults,
-  messages,
-  setMessages,
-  travelRiskFactors,
-  riskFactorWeights,
-}) => {
+const SymptomInput = ({ selectedSymptoms, setSelectedSymptoms, patientInfo, setPatientInfo, onDiagnosisResults }) => {
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
-  const [drugSuggestions, setDrugSuggestions] = useState([]);
+  const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState('welcome');
-  const [isTyping, setIsTyping] = useState(false);
-  const [typingText, setTypingText] = useState('');
+  const [messages, setMessages] = useState([
+    {
+      text: BotMessages.getWelcomeMessage(),
+      isUser: false,
+      isTyping: false,
+    },
+  ]);
+  const [typingMessage, setTypingMessage] = useState('');
   const [typingIndex, setTypingIndex] = useState(0);
+  const chatEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  const addBotMessage = (text) => {
-    setTypingText(text);
-    setTypingIndex(0);
-    setMessages((prev) => [...prev, { role: 'bot', content: '', isTyping: true }]);
-    setIsTyping(true);
+  const steps = {
+    welcome: { next: 'age', validate: () => true, error: '' },
+    age: {
+      next: 'gender',
+      validate: (value) => value && !isNaN(parseInt(value)) && parseInt(value) > 0 && parseInt(value) <= 120,
+      error: 'Please enter a valid age (1-120).',
+    },
+    gender: { next: 'symptoms', validate: (value) => ['Male', 'Female', 'Other'].includes(value), error: 'Please select a valid gender.' },
+    symptoms: { next: 'duration', validate: () => selectedSymptoms.length >= 2, error: 'Please select at least two symptoms.' },
+    duration: {
+      next: 'durationUnit',
+      validate: (value) => value && !isNaN(parseInt(value)) && parseInt(value) > 0 && parseInt(value) <= 1000,
+      error: 'Please enter a valid duration (1-1000).',
+    },
+    durationUnit: {
+      next: 'severity',
+      validate: (value) => ['Days', 'Weeks', 'Months'].includes(value),
+      error: 'Please select Days, Weeks, or Months.',
+    },
+    severity: {
+      next: 'travelRegion',
+      validate: (value) => ['Mild', 'Moderate', 'Severe'].includes(value),
+      error: 'Please select a severity level.',
+    },
+    travelRegion: {
+      next: 'riskFactors',
+      validate: (value) => [...Object.keys(travelRiskFactors), 'None'].includes(value),
+      error: 'Please select a travel region or "None".',
+    },
+    riskFactors: { next: 'drugHistory', validate: () => true, error: '' },
+    drugHistory: {
+      next: 'submit',
+      validate: (value) => Object.keys(drugHistoryWeights).includes(value),
+      error: 'Please select a drug history option.',
+    },
+    submit: { next: null, validate: () => true, error: '' },
   };
 
   useEffect(() => {
-    if (isTyping && typingText && typingIndex < typingText.length) {
-      const timer = setTimeout(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (currentStep !== 'welcome') {
+      inputRef.current?.focus();
+    }
+  }, [messages, currentStep]);
+
+  useEffect(() => {
+    if (currentStep === 'submit') {
+      handleSubmit();
+    }
+  }, [currentStep]);
+
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && !lastMessage.isUser && lastMessage.isTyping && typingMessage) {
+      if (typingIndex < typingMessage.length) {
+        const timer = setTimeout(() => {
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1].text = typingMessage.slice(0, typingIndex + 1);
+            return updated;
+          });
+          setTypingIndex((prev) => prev + 1);
+        }, 30);
+        return () => clearTimeout(timer);
+      } else {
         setMessages((prev) => {
           const updated = [...prev];
-          updated[updated.length - 1].content = typingText.slice(0, typingIndex + 1);
+          updated[updated.length - 1].isTyping = false;
           return updated;
         });
-        setTypingIndex((prev) => prev + 1);
-      }, 30);
-      return () => clearTimeout(timer);
-    } else if (isTyping && typingIndex >= typingText.length) {
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1].isTyping = false;
-        return updated;
-      });
-      setIsTyping(false);
-      setTypingText('');
-      setTypingIndex(0);
-    }
-  }, [isTyping, typingIndex, typingText]);
-
-  const handlePatientInfoChange = (field, value) => {
-    setPatientInfo((prev) => ({ ...prev, [field]: value }));
-    if (field === 'symptoms') {
-      setSelectedSymptoms(value);
-    }
-    if (field !== 'symptoms' && field !== 'riskFactors' && field !== 'drugHistory') {
-      const stepIndex = steps.findIndex((s) => s.name === field);
-      const nextStep = steps[stepIndex + 1]?.name;
-      if (nextStep) {
-        setCurrentStep(nextStep);
-        addBotMessage(BotMessages.getStepPrompt(nextStep));
+        setTypingMessage('');
+        setTypingIndex(0);
       }
     }
+  }, [typingIndex, typingMessage, messages]);
+
+  const addBotMessage = (text) => {
+    setTypingMessage(text);
+    setTypingIndex(0);
+    setMessages((prev) => [...prev, { text: '', isUser: false, isTyping: true }]);
   };
 
   const handleInputChange = (e) => {
     const text = e.target.value;
     setInput(text);
 
-    if (currentStep === 'symptoms' && text.trim()) {
+    if (!text.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    if (currentStep === 'symptoms') {
       const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
       const filteredSymptoms = availableSymptoms
         .filter(
@@ -100,13 +128,18 @@ const SymptomInput = ({
             symptom.toLowerCase().includes(text.toLowerCase()) &&
             !selectedSymptoms.includes(symptom)
         )
-        .slice(0, 5);
+        .slice(0, 3);
 
-      const filteredCombinations = Object.keys(symptomCombinations)
-        .filter((combination) =>
-          combination.toLowerCase().includes(text.toLowerCase())
-        )
-        .slice(0, 5);
+      const combinationKeys = Object.keys(symptomCombinations);
+      const filteredCombinations = combinationKeys
+        .filter((combination) => {
+          const symptoms = combination.split(', ');
+          return (
+            symptoms.some((symptom) => symptom.toLowerCase().includes(text.toLowerCase())) &&
+            symptoms.some((symptom) => !selectedSymptoms.includes(symptom))
+          );
+        })
+        .slice(0, 2);
 
       const combinedSuggestions = [
         ...filteredCombinations.map((combination) => ({
@@ -119,223 +152,224 @@ const SymptomInput = ({
           text: symptom,
         })),
       ];
+
       setSuggestions(combinedSuggestions);
-      setDrugSuggestions([]);
-    } else if (currentStep === 'drugHistory' && text.trim()) {
-      const filteredDrugs = drugOptions
-        .filter(
-          (drug) =>
-            drug.toLowerCase().includes(text.toLowerCase()) &&
-            !patientInfo.drugHistory.includes(drug)
-        )
-        .slice(0, 5);
-      setDrugSuggestions(filteredDrugs);
-      setSuggestions([]);
+    } else if (['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
+      const options = {
+        gender: ['Male', 'Female', 'Other'],
+        durationUnit: ['Days', 'Weeks', 'Months'],
+        severity: ['Mild', 'Moderate', 'Severe'],
+        travelRegion: [...Object.keys(travelRiskFactors), 'None'],
+        drugHistory: Object.keys(drugHistoryWeights),
+      }[currentStep];
+      const filteredOptions = options
+        .filter((option) => option.toLowerCase().includes(text.toLowerCase()))
+        .slice(0, 4);
+      setSuggestions(filteredOptions.map((option) => ({ type: 'single', text: option })));
     } else {
       setSuggestions([]);
-      setDrugSuggestions([]);
     }
   };
 
   const handleSymptomSelect = (suggestion) => {
-    const symptomsToAdd = suggestion.type === 'combination' ? suggestion.symptoms : [suggestion.text];
+    let symptomsToAdd = suggestion.type === 'combination' ? suggestion.symptoms : [suggestion.text];
     const uniqueNewSymptoms = symptomsToAdd.filter((symptom) => !selectedSymptoms.includes(symptom));
+
     if (uniqueNewSymptoms.length > 0) {
       const updatedSymptoms = [...selectedSymptoms, ...uniqueNewSymptoms];
-      handlePatientInfoChange('symptoms', updatedSymptoms);
+      setSelectedSymptoms(updatedSymptoms);
       setMessages((prev) => [
         ...prev,
-        { role: 'user', content: `Added: ${uniqueNewSymptoms.join(', ')}`, isTyping: false },
+        { text: `Added: ${uniqueNewSymptoms.join(', ')}`, isUser: true },
       ]);
       addBotMessage(BotMessages.getSymptomPrompt());
+      setError('');
     }
+
     setInput('');
     setSuggestions([]);
   };
 
-  const handleDrugSelect = (drug) => {
-    const currentDrugs = patientInfo.drugHistory || [];
-    if (!currentDrugs.includes(drug)) {
-      const updatedDrugs = [...currentDrugs, drug];
-      handlePatientInfoChange('drugHistory', updatedDrugs);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'user', content: `Added drug: ${drug}`, isTyping: false },
-      ]);
-      addBotMessage(BotMessages.getStepPrompt('drugHistory'));
-    }
-    setInput('');
-    setDrugSuggestions([]);
+  const removeSymptom = (symptomToRemove) => {
+    const updatedSymptoms = selectedSymptoms.filter((s) => s !== symptomToRemove);
+    setSelectedSymptoms(updatedSymptoms);
+    setMessages((prev) => [
+      ...prev,
+      { text: `Removed: ${symptomToRemove}`, isUser: true },
+    ]);
+    addBotMessage(BotMessages.getSymptomPrompt());
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handlePatientInfoChange = (field, value) => {
+    if (!steps[field].validate(value)) {
+      setError(steps[field].error);
+      addBotMessage(steps[field].error);
+      return;
+    }
+    setPatientInfo((prev) => ({ ...prev, [field]: value }));
+    setMessages((prev) => [
+      ...prev,
+      { text: `${field.charAt(0).toUpperCase() + field.slice(1)}: ${Array.isArray(value) ? value.join(', ') || 'None' : value}`, isUser: true },
+    ]);
+    setCurrentStep(steps[field].next);
+    addBotMessage(getNextPrompt(steps[field].next));
+    setInput('');
+    setSuggestions([]);
+    setError('');
+  };
+
+  const getNextPrompt = (step) => {
+    return BotMessages.getStepPrompt(step);
+  };
+
+  const handleSubmit = async () => {
+    const result = await calculateDiagnosis(
+      selectedSymptoms,
+      parseInt(patientInfo.duration),
+      patientInfo.durationUnit,
+      patientInfo.severity,
+      parseInt(patientInfo.age),
+      patientInfo.gender,
+      patientInfo.drugHistory,
+      patientInfo.travelRegion,
+      patientInfo.riskFactors
+    );
+    onDiagnosisResults(result);
+  };
+
+  const handleInputSubmit = (e) => {
+    if (e.key !== 'Enter' && e.type !== 'click') return;
     if (!input.trim()) return;
 
-    setMessages((prev) => [...prev, { role: 'user', content: input, isTyping: false }]);
+    setMessages((prev) => [
+      ...prev,
+      { text: input, isUser: true },
+    ]);
 
-    const currentStepConfig = steps.find((step) => step.name === currentStep);
-    const stepIndex = steps.findIndex((s) => s.name === currentStep);
-    const nextStep = steps[stepIndex + 1]?.name;
+    const inputLower = input.toLowerCase().trim();
 
     if (currentStep === 'welcome') {
-      if (input.toLowerCase() === 'start') {
+      if (inputLower === 'start') {
         setCurrentStep('age');
-        addBotMessage(BotMessages.getStepPrompt('age'));
-        setInput('');
-        return;
-      } else if (input.toLowerCase() === 'help') {
+        addBotMessage(getNextPrompt('age'));
+      } else if (inputLower === 'help') {
         addBotMessage(BotMessages.getHelpMessage());
-        setInput('');
-        return;
-      }
-    } else if (currentStep === 'symptoms' && input.toLowerCase() === 'done') {
-      if ((patientInfo.symptoms || []).length >= 2) {
-        setCurrentStep(nextStep);
-        addBotMessage(BotMessages.getStepPrompt(nextStep));
-        setInput('');
-        return;
       } else {
-        addBotMessage('Please provide at least two symptoms before typing "done".');
-        setInput('');
-        return;
-      }
-    } else if ((currentStep === 'riskFactors' || currentStep === 'drugHistory') && (input.toLowerCase() === 'done' || input.toLowerCase() === 'none')) {
-      setCurrentStep(nextStep);
-      addBotMessage(BotMessages.getStepPrompt(nextStep));
-      setInput('');
-      return;
-    } else if (currentStep === 'symptoms' && suggestions.length > 0) {
-      const matchedSuggestion = suggestions.find(
-        (s) => s.text.toLowerCase() === input.toLowerCase()
-      );
-      if (matchedSuggestion) {
-        handleSymptomSelect(matchedSuggestion);
-        return;
-      }
-    } else if (currentStep === 'drugHistory' && drugSuggestions.length > 0) {
-      const matchedDrug = drugSuggestions.find(
-        (drug) => drug.toLowerCase() === input.toLowerCase()
-      );
-      if (matchedDrug) {
-        handleDrugSelect(matchedDrug);
-        return;
-      }
-    }
-
-    const contextResult = ContextHandler.handleContext(input, currentStep, setMessages, addBotMessage, setInput, setCurrentStep, patientInfo, drugOptions);
-    if (contextResult.isValid) {
-      handlePatientInfoChange(currentStep, contextResult.value);
-      if (currentStep !== 'riskFactors' && currentStep !== 'drugHistory') {
-        setCurrentStep(nextStep || 'submit');
-        addBotMessage(BotMessages.getStepPrompt(nextStep || 'submit'));
-      } else {
-        addBotMessage(BotMessages.getStepPrompt(currentStep));
+        addBotMessage(BotMessages.getInvalidWelcomeMessage());
       }
       setInput('');
+    } else if (currentStep === 'symptoms') {
+      if (inputLower === 'done') {
+        if (selectedSymptoms.length < 2) {
+          setError('Please select at least two symptoms.');
+          addBotMessage('You need at least two symptoms to proceed. Please add more or select from the list.');
+        } else {
+          setCurrentStep(steps[currentStep].next);
+          addBotMessage(getNextPrompt(steps[currentStep].next));
+          setInput('');
+        }
+      } else if (suggestions.length > 0) {
+        handleSymptomSelect(suggestions[0]);
+      } else {
+        setError('Please select a valid symptom from the list.');
+        addBotMessage('That symptom isn\'t in our list. Please select one from the suggestions.');
+        setInput('');
+      }
+    } else if (currentStep === 'riskFactors' && inputLower === 'none') {
+      handlePatientInfoChange('riskFactors', []);
+    } else if (currentStep === 'travelRegion' && inputLower === 'none') {
+      handlePatientInfoChange('travelRegion', 'None');
+    } else if (['age', 'duration'].includes(currentStep)) {
+      if (steps[currentStep].validate(input)) {
+        handlePatientInfoChange(currentStep, input);
+      } else {
+        setError(steps[currentStep].error);
+        addBotMessage(steps[currentStep].error);
+        setInput('');
+      }
+    } else if (['gender', 'durationUnit', 'severity', 'travelRegion', 'drugHistory'].includes(currentStep)) {
+      const options = {
+        gender: ['Male', 'Female', 'Other'],
+        durationUnit: ['Days', 'Weeks', 'Months'],
+        severity: ['Mild', 'Moderate', 'Severe'],
+        travelRegion: [...Object.keys(travelRiskFactors), 'None'],
+        drugHistory: Object.keys(drugHistoryWeights),
+      }[currentStep];
+      const matchedOption = options.find((opt) => opt.toLowerCase() === inputLower);
+      if (matchedOption && steps[currentStep].validate(matchedOption)) {
+        handlePatientInfoChange(currentStep, matchedOption);
+      } else {
+        setError(`Please select a valid ${currentStep} from the suggestions or type a matching value.`);
+        addBotMessage(`That's not a valid ${currentStep}. Please select from the suggestions or type a matching value.`);
+        setInput('');
+      }
     }
   };
 
-  useEffect(() => {
-    if (currentStep === 'submit') {
-      calculateDiagnosis(
-        selectedSymptoms,
-        parseInt(patientInfo.duration),
-        patientInfo.durationUnit,
-        patientInfo.severity,
-        parseInt(patientInfo.age),
-        patientInfo.gender,
-        patientInfo.drugHistory,
-        patientInfo.travelRegion,
-        patientInfo.riskFactors
-      ).then((result) => {
-        onDiagnosisResults(result);
-      });
-    }
-  }, [currentStep, selectedSymptoms, patientInfo, onDiagnosisResults]);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
   return (
-    <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4">
-      {(currentStep === 'symptoms' && suggestions.length > 0) || (currentStep === 'drugHistory' && drugSuggestions.length > 0) ? (
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            {(currentStep === 'symptoms' ? suggestions : drugSuggestions).map((item, index) => (
-              <button
-                key={index}
-                onClick={() => currentStep === 'symptoms' ? handleSymptomSelect(item) : handleDrugSelect(item)}
-                className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
-              >
-                {item.text || item}
-              </button>
-            ))}
-            <button
-              onClick={() => {
-                if (currentStep === 'symptoms' && (patientInfo.symptoms || []).length < 2) {
-                  addBotMessage('Please provide at least two symptoms before typing "done".');
-                } else {
-                  setCurrentStep(steps[steps.findIndex((s) => s.name === currentStep) + 1].name);
-                  addBotMessage(BotMessages.getStepPrompt(steps[steps.findIndex((s) => s.name === currentStep) + 1].name));
-                }
-                setInput('');
-                setSuggestions([]);
-                setDrugSuggestions([]);
-              }}
-              className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      ) : null}
+    <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4 max-h-[70dvh] flex flex-col">
+      <SymptomChat
+        messages={messages}
+        chatEndRef={chatEndRef}
+        error={error}
+      />
+      {currentStep === 'symptoms' && (
+        <SymptomSelector
+          selectedSymptoms={selectedSymptoms}
+          removeSymptom={removeSymptom}
+          suggestions={suggestions}
+          handleSymptomSelect={handleSymptomSelect}
+        />
+      )}
       {['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
         <PatientInfoSelector
           currentStep={currentStep}
           patientInfo={patientInfo}
           handlePatientInfoChange={handlePatientInfoChange}
-          setCurrentStep={setCurrentStep}
           travelRiskFactors={travelRiskFactors}
           riskFactorWeights={riskFactorWeights}
-          drugSuggestions={drugSuggestions}
-          handleDrugSelect={handleDrugSelect}
+          drugHistoryWeights={drugHistoryWeights}
         />
       )}
       {currentStep !== 'submit' && (
-        <form onSubmit={handleSubmit} className="flex items-end gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={handleInputChange}
-            placeholder={
-              currentStep === 'welcome'
-                ? 'Type "start" or "help"'
-                : currentStep === 'symptoms'
-                ? 'Type symptoms or "done"'
-                : currentStep === 'drugHistory'
-                ? 'Type drug name, "done", or "none"'
-                : currentStep === 'riskFactors'
-                ? 'Type risk factors, "done", or "none"'
-                : currentStep === 'travelRegion'
-                ? 'Type region or "none"'
-                : currentStep === 'age' || currentStep === 'duration'
-                ? `Enter ${currentStep} (number)`
-                : `Enter ${currentStep}`
-            }
-            className="flex-1 p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base touch-manipulation"
-            disabled={currentStep === 'submit'}
-          />
+        <div className="flex items-end gap-2">
+          <div className="relative flex-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={handleInputChange}
+              onKeyPress={handleInputSubmit}
+              onFocus={() => window.scrollTo({ top: inputRef.current.offsetTop - 100, behavior: 'smooth' })}
+              placeholder={
+                currentStep === 'symptoms'
+                  ? 'Type symptoms or "done"'
+                  : currentStep === 'riskFactors'
+                  ? 'Type "none" or select from list'
+                  : currentStep === 'travelRegion'
+                  ? 'Type region or "none"'
+                  : currentStep === 'welcome'
+                  ? 'Type "start" or "help"'
+                  : `Enter ${currentStep}`
+              }
+              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base touch-manipulation"
+              disabled={currentStep === 'submit'}
+            />
+            {currentStep === 'symptoms' && (
+              <Plus
+                size={16}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-primary"
+              />
+            )}
+          </div>
           <button
-            type="submit"
+            onClick={handleInputSubmit}
             className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-all"
             disabled={currentStep === 'submit' || !input.trim()}
           >
             <Send size={16} />
           </button>
-        </form>
+        </div>
       )}
     </div>
   );
