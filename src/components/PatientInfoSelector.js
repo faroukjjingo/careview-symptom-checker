@@ -8,7 +8,8 @@ const PatientInfoSelector = ({
   setCurrentStep,
   travelRiskFactors,
   riskFactorWeights,
-  drugHistoryWeights,
+  drugSuggestions,
+  handleDrugSelect,
 }) => {
   const options = {
     gender: ['Male', 'Female', 'Other'],
@@ -16,7 +17,6 @@ const PatientInfoSelector = ({
     severity: ['Mild', 'Moderate', 'Severe'],
     travelRegion: ['None', ...Object.keys(travelRiskFactors)].sort((a, b) => a.localeCompare(b)),
     riskFactors: Object.keys(riskFactorWeights).sort((a, b) => a.localeCompare(b)),
-    drugHistory: ['None', ...Object.keys(drugHistoryWeights)].sort((a, b) => a.localeCompare(b)),
   };
 
   const steps = [
@@ -29,7 +29,7 @@ const PatientInfoSelector = ({
     { name: 'severity', validate: (value) => ['mild', 'moderate', 'severe'].includes(value.toLowerCase()) },
     { name: 'travelRegion', validate: (value, travelRiskFactors) => ['none', ...Object.keys(travelRiskFactors || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
     { name: 'riskFactors', validate: (value, riskFactorWeights) => Array.isArray(value) && (value.length === 0 || value.every((v) => Object.keys(riskFactorWeights || {}).includes(v))) },
-    { name: 'drugHistory', validate: (value, drugHistoryWeights) => ['none', ...Object.keys(drugHistoryWeights || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
+    { name: 'drugHistory', validate: (value, drugOptions) => Array.isArray(value) && (value.length === 0 || value.every((v) => drugOptions.includes(v))) },
     { name: 'submit', validate: () => true },
   ];
 
@@ -52,21 +52,21 @@ const PatientInfoSelector = ({
     }
   };
 
-  const handleRemoveRiskFactor = (risk) => {
-    const updatedRiskFactors = patientInfo.riskFactors.filter((r) => r !== risk);
-    handlePatientInfoChange('riskFactors', updatedRiskFactors);
+  const handleRemoveItem = (field, item) => {
+    const updatedItems = patientInfo[field].filter((i) => i !== item);
+    handlePatientInfoChange(field, updatedItems);
   };
 
   return (
     <div className="space-y-2">
-      {currentStep !== 'age' && currentStep !== 'duration' && (
+      {['gender', 'durationUnit', 'severity', 'travelRegion'].includes(currentStep) && (
         <div className="flex flex-wrap gap-2">
           {options[currentStep].map((option, index) => (
             <button
               key={index}
               onClick={() => handleSelect(option)}
               className={`p-2 rounded-lg text-sm transition-all ${
-                patientInfo[currentStep] === option || (currentStep === 'riskFactors' && patientInfo.riskFactors.includes(option))
+                patientInfo[currentStep] === option
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
               }`}
@@ -76,16 +76,50 @@ const PatientInfoSelector = ({
           ))}
         </div>
       )}
-      {currentStep === 'riskFactors' && patientInfo.riskFactors.length > 0 && (
+      {currentStep === 'riskFactors' && (
         <div className="flex flex-wrap gap-2">
-          {patientInfo.riskFactors.map((risk, index) => (
+          {options.riskFactors.map((option, index) => (
+            <button
+              key={index}
+              onClick={() => handleSelect(option)}
+              className={`p-2 rounded-lg text-sm transition-all ${
+                patientInfo.riskFactors.includes(option)
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
+      {currentStep === 'drugHistory' && drugSuggestions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {drugSuggestions.map((drug, index) => (
+            <button
+              key={index}
+              onClick={() => handleDrugSelect(drug)}
+              className={`p-2 rounded-lg text-sm transition-all ${
+                patientInfo.drugHistory.includes(drug)
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
+              }`}
+            >
+              {drug}
+            </button>
+          ))}
+        </div>
+      )}
+      {(currentStep === 'riskFactors' || currentStep === 'drugHistory') && patientInfo[currentStep].length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {patientInfo[currentStep].map((item, index) => (
             <span
               key={index}
               className="p-2 bg-primary text-primary-foreground rounded-lg text-sm flex items-center"
             >
-              {risk}
+              {item}
               <button
-                onClick={() => handleRemoveRiskFactor(risk)}
+                onClick={() => handleRemoveItem(currentStep, item)}
                 className="ml-2 text-primary-foreground hover:text-red-500"
               >
                 ×
@@ -97,8 +131,8 @@ const PatientInfoSelector = ({
       {['travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
         <button
           onClick={() => {
-            if (currentStep === 'riskFactors') {
-              handlePatientInfoChange('riskFactors', []);
+            if (currentStep === 'riskFactors' || currentStep === 'drugHistory') {
+              handlePatientInfoChange(currentStep, []);
             } else {
               handlePatientInfoChange(currentStep, 'None');
             }
@@ -110,7 +144,7 @@ const PatientInfoSelector = ({
           }}
           className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
         >
-          {currentStep === 'riskFactors' ? 'Done' : 'Skip'}
+          {currentStep === 'riskFactors' || currentStep === 'drugHistory' ? 'Done' : 'Skip'}
         </button>
       )}
     </div>
