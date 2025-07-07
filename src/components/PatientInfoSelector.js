@@ -18,8 +18,7 @@ const PatientInfoSelector = ({
     drugHistory: ['None', ...Object.keys(drugHistoryWeights)].sort((a, b) => a.localeCompare(b)),
   };
 
-  const handleSelect = (e) => {
-    const value = e.target.value;
+  const handleSelect = (value) => {
     if (!value) return;
 
     if (currentStep === 'riskFactors') {
@@ -29,28 +28,24 @@ const PatientInfoSelector = ({
         : [...currentRiskFactors, value];
       handlePatientInfoChange('riskFactors', newRiskFactors);
     } else {
-      handlePatientInfoChange(currentStep, value);
+      handlePatientInfoChange(currentStep, value.charAt(0).toUpperCase() + value.slice(1));
     }
   };
 
   return (
     <div className="space-y-2">
       {currentStep !== 'age' && currentStep !== 'duration' && (
-        <select
-          onChange={handleSelect}
-          value=""
-          multiple={currentStep === 'riskFactors'}
-          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
-        >
-          <option value="" disabled>
-            Select {currentStep}
-          </option>
+        <div className="flex flex-wrap gap-2">
           {options[currentStep].map((option, index) => (
-            <option key={index} value={option}>
+            <button
+              key={index}
+              onClick={() => handleSelect(option)}
+              className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
+            >
               {option}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
       )}
       {currentStep === 'riskFactors' && (
         <div className="flex flex-wrap gap-2">
