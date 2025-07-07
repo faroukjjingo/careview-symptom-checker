@@ -80,6 +80,14 @@ const SymptomInput = ({
     if (field === 'symptoms') {
       setSelectedSymptoms(value);
     }
+    if (field !== 'symptoms' && field !== 'riskFactors') {
+      const stepIndex = steps.findIndex((s) => s.name === field);
+      const nextStep = steps[stepIndex + 1]?.name;
+      if (nextStep) {
+        setCurrentStep(nextStep);
+        addBotMessage(BotMessages.getStepPrompt(nextStep));
+      }
+    }
   };
 
   const handleInputChange = (e) => {
@@ -143,16 +151,6 @@ const SymptomInput = ({
 
     setMessages((prev) => [...prev, { role: 'user', content: input, isTyping: false }]);
 
-    if (currentStep === 'symptoms' && suggestions.length > 0 && input.toLowerCase() !== 'done') {
-      const matchedSuggestion = suggestions.find(
-        (s) => s.text.toLowerCase() === input.toLowerCase()
-      );
-      if (matchedSuggestion) {
-        handleSymptomSelect(matchedSuggestion);
-        return;
-      }
-    }
-
     const currentStepConfig = steps.find((step) => step.name === currentStep);
     const stepIndex = steps.findIndex((s) => s.name === currentStep);
     const nextStep = steps[stepIndex + 1]?.name;
@@ -177,6 +175,14 @@ const SymptomInput = ({
       } else {
         addBotMessage('Please provide at least two symptoms before typing "done".');
         setInput('');
+        return;
+      }
+    } else if (currentStep === 'symptoms' && suggestions.length > 0) {
+      const matchedSuggestion = suggestions.find(
+        (s) => s.text.toLowerCase() === input.toLowerCase()
+      );
+      if (matchedSuggestion) {
+        handleSymptomSelect(matchedSuggestion);
         return;
       }
     } else if (currentStepConfig && currentStepConfig.validate) {
@@ -296,6 +302,21 @@ const SymptomInput = ({
                 {suggestion.text}
               </button>
             ))}
+            <button
+              onClick={() => {
+                if ((patientInfo.symptoms || []).length >= 2) {
+                  setCurrentStep(steps[steps.findIndex((s) => s.name === 'symptoms') + 1].name);
+                  addBotMessage(BotMessages.getStepPrompt(steps[steps.findIndex((s) => s.name === 'symptoms') + 1].name));
+                } else {
+                  addBotMessage('Please provide at least two symptoms before typing "done".');
+                }
+                setInput('');
+                setSuggestions([]);
+              }}
+              className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
+            >
+              Done
+            </button>
           </div>
         </div>
       )}
