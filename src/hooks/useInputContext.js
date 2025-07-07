@@ -76,31 +76,39 @@ const useInputContext = () => {
     const inputLower = input.toLowerCase().trim();
     const currentStepConfig = steps.find((step) => step.name === currentStep);
 
+    console.log(`Processing input: ${inputLower} for step: ${currentStep}`); // Debug log
+
     if (currentStep === 'welcome') {
       if (inputLower === 'start') return { isValid: true, value: 'start' };
       if (inputLower === 'help') {
-        startTyping(BotMessages.getHelpMessage());
-        return { isValid: false, response: BotMessages.getHelpMessage() };
+        const response = BotMessages.getHelpMessage();
+        startTyping(response);
+        return { isValid: false, response };
       }
-      startTyping(BotMessages.getInvalidWelcomeMessage());
-      return { isValid: false, response: BotMessages.getInvalidWelcomeMessage() };
+      const response = BotMessages.getInvalidWelcomeMessage();
+      startTyping(response);
+      return { isValid: false, response };
     } else if (currentStep === 'symptoms' && inputLower === 'done') {
       if ((patientInfo.symptoms || []).length >= 2) {
         return { isValid: true, value: patientInfo.symptoms };
       }
-      startTyping('Please provide at least two symptoms before typing "done".');
-      return { isValid: false, response: 'Please provide at least two symptoms before typing "done".' };
+      const response = 'Please provide at least two symptoms before typing "done".';
+      startTyping(response);
+      return { isValid: false, response };
     } else if ((currentStep === 'riskFactors' || currentStep === 'drugHistory') && (inputLower === 'done' || inputLower === 'none')) {
+      console.log(`Completing ${currentStep} with value: ${inputLower === 'none' ? '[]' : JSON.stringify(patientInfo[currentStep])}`); // Debug log
       return { isValid: true, value: inputLower === 'none' ? [] : patientInfo[currentStep] };
     } else if (currentStep === 'symptoms' && suggestions.length > 0) {
       const matchedSuggestion = suggestions.find((s) => s.text.toLowerCase() === inputLower);
       if (matchedSuggestion) {
         const symptomsToAdd = matchedSuggestion.type === 'combination' ? matchedSuggestion.symptoms : [matchedSuggestion.text];
+        console.log(`Adding symptoms: ${symptomsToAdd}`); // Debug log
         return { isValid: true, value: [...(patientInfo.symptoms || []), ...symptomsToAdd] };
       }
     } else if (currentStep === 'drugHistory' && drugSuggestions.length > 0) {
       const matchedDrug = drugSuggestions.find((drug) => drug.toLowerCase() === inputLower);
       if (matchedDrug) {
+        console.log(`Adding drug: ${matchedDrug}`); // Debug log
         return { isValid: true, value: [...(patientInfo.drugHistory || []), matchedDrug] };
       }
     }
@@ -128,13 +136,15 @@ const useInputContext = () => {
       } else {
         const riskMatch = Object.keys(patientInfo.riskFactorWeights || {})
           .find((risk) => inputLower.includes(risk.toLowerCase()));
-        value = riskMatch ? [...(patientInfo.riskFactors || []), riskMatch] : null;
+        value = riskMatch ? [...(patientInfo.riskFactors || []), riskMatch] : inputLower;
       }
     } else if (currentStep === 'drugHistory') {
       value = ['none', ...patientInfo.drugHistoryWeights]
         .find((v) => inputLower.includes(v.toLowerCase())) || inputLower;
       value = value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
     }
+
+    console.log(`Validated value for ${currentStep}: ${value}`); // Debug log
 
     if (value !== null && currentStepConfig?.validate(value, patientInfo.travelRiskFactors, patientInfo.riskFactorWeights, patientInfo.drugHistoryWeights)) {
       return { isValid: true, value };
