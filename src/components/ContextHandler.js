@@ -35,9 +35,47 @@ const ContextHandler = {
     feedbackOrComplaints: ['this is', 'not working', 'issue', 'problem', 'sucks'],
   },
 
-  handleContext(input, currentStep, setMessages, addBotMessage, setInput) {
+  handleContext(input, currentStep, setMessages, addBotMessage, setInput, patientInfo) {
     const inputLower = input.toLowerCase().trim();
-    
+    const currentStepConfig = steps.find((step) => step.name === currentStep);
+
+    // Skip context handling if input is valid for the current step
+    let value = inputLower;
+    if (currentStep === 'age' || currentStep === 'duration') {
+      const numberMatch = input.match(/\d+/);
+      value = numberMatch ? parseInt(numberMatch[0], 10) : null;
+    } else if (currentStep === 'gender') {
+      value = ['male', 'female', 'other'].find((v) => inputLower.includes(v)) || value;
+    } else if (currentStep === 'durationUnit') {
+      value = ['days', 'weeks', 'months'].find((v) => inputLower.includes(v)) || value;
+    } else if (currentStep === 'severity') {
+      value = ['mild', 'moderate', 'severe'].find((v) => inputLower.includes(v)) || value;
+    } else if (currentStep === 'travelRegion') {
+      value = ['none', ...Object.keys(patientInfo.travelRiskFactors || {})]
+        .find((v) => inputLower.includes(v.toLowerCase())) || value;
+    } else if (currentStep === 'riskFactors') {
+      value = inputLower === 'none' || inputLower === 'skip' ? [] :
+        Object.keys(patientInfo.riskFactorWeights || {})
+          .find((risk) => inputLower.includes(risk.toLowerCase())) ?
+          [...(patientInfo.riskFactors || []), 
+            Object.keys(patientInfo.riskFactorWeights || {})
+              .find((risk) => inputLower.includes(risk.toLowerCase()))] : null;
+    } else if (currentStep === 'drugHistory') {
+      value = ['none', ...Object.keys(patientInfo.drugHistoryWeights || {})]
+        .find((v) => inputLower.includes(v.toLowerCase())) || value;
+    } else if (currentStep === 'symptoms' && inputLower === 'done') {
+      value = patientInfo.symptoms || [];
+    } else if (currentStep === 'welcome') {
+      value = ['start', 'help'].find((v) => inputLower.includes(v)) || value;
+    } else if (currentStep === 'submit') {
+      value = ['submit', 'done', 'finish'].find((v) => inputLower.includes(v)) || value;
+    }
+
+    if (value !== null && currentStepConfig?.validate(value, patientInfo.travelRiskFactors, patientInfo.riskFactorWeights, patientInfo.drugHistoryWeights)) {
+      return false; // Valid input, let SymptomInput handle it
+    }
+
+    // Handle out-of-context input
     for (const [context, keywords] of Object.entries(ContextHandler.contexts)) {
       if (keywords.some((keyword) => inputLower.includes(keyword))) {
         let response;
