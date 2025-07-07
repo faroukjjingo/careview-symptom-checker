@@ -11,6 +11,20 @@ import { riskFactorWeights } from './RiskFactorWeights';
 import drugHistoryWeights from './DrugHistoryWeights';
 import calculateDiagnosis from './SymptomCalculations';
 
+const steps = [
+  { name: 'welcome', validate: (value) => ['start', 'help'].includes(value.toLowerCase()) },
+  { name: 'age', validate: (value) => !isNaN(value) && value > 0 && value <= 120 },
+  { name: 'gender', validate: (value) => ['male', 'female', 'other'].includes(value.toLowerCase()) },
+  { name: 'symptoms', validate: (value) => Array.isArray(value) && value.length >= 2 },
+  { name: 'duration', validate: (value) => !isNaN(value) && value > 0 },
+  { name: 'durationUnit', validate: (value) => ['days', 'weeks', 'months'].includes(value.toLowerCase()) },
+  { name: 'severity', validate: (value) => ['mild', 'moderate', 'severe'].includes(value.toLowerCase()) },
+  { name: 'travelRegion', validate: (value, travelRiskFactors) => ['none', ...Object.keys(travelRiskFactors || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
+  { name: 'riskFactors', validate: (value, riskFactorWeights) => Array.isArray(value) && (value.length === 0 || value.every((v) => Object.keys(riskFactorWeights || {}).includes(v))) },
+  { name: 'drugHistory', validate: (value, drugHistoryWeights) => ['none', ...Object.keys(drugHistoryWeights || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
+  { name: 'submit', validate: () => true },
+];
+
 const SymptomInput = ({
   selectedSymptoms,
   setSelectedSymptoms,
@@ -23,7 +37,7 @@ const SymptomInput = ({
 }) => {
   const [messages, setMessages] = useState([{ role: 'bot', content: BotMessages.getWelcomeMessage(), isTyping: false }]);
   const [input, setInput] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
   const [currentStep, setCurrentStep] = useState('welcome');
   const [isTyping, setIsTyping] = useState(false);
   const [typingText, setTypingText] = useState('');
@@ -68,36 +82,59 @@ const SymptomInput = ({
     }
   };
 
-  const handleSelectChange = (e) => {
-    const value = e.target.value;
-    if (!value) return;
+  const handleInputChange = (e) => {
+    const text = e.target.value;
+    setInput(text);
 
-    if (currentStep === 'symptoms' || currentStep === 'riskFactors') {
-      const itemsToAdd = value.includes(', ') ? value.split(', ') : [value];
-      const uniqueNewItems = itemsToAdd.filter((item) => !(patientInfo[field] || []).includes(item));
-      if (uniqueNewItems.length > 0) {
-        const updatedItems = [...(patientInfo[field] || []), ...uniqueNewItems];
-        handlePatientInfoChange(field, updatedItems);
-        setMessages((prev) => [
-          ...prev,
-          { role: 'user', content: `Added: ${uniqueNewItems.join(', ')}`, isTyping: false },
-        ]);
-        addBotMessage(BotMessages.getStepPrompt(field));
-      }
-    } else {
-      handlePatientInfoChange(currentStep, value);
+    if (currentStep !== 'symptoms' || !text.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
+    const filteredSymptoms = availableSymptoms
+      .filter(
+        (symptom) =>
+          symptom.toLowerCase().includes(text.toLowerCase()) &&
+          !selectedSymptoms.includes(symptom)
+      )
+      .slice(0, 5);
+
+    const filteredCombinations = Object.keys(symptomCombinations)
+      .filter((combination) =>
+        combination.toLowerCase().includes(text.toLowerCase())
+      )
+      .slice(0, 5);
+
+    const combinedSuggestions = [
+      ...filteredCombinations.map((combination) => ({
+        type: 'combination',
+        text: combination,
+        symptoms: combination.split(', '),
+      })),
+      ...filteredSymptoms.map((symptom) => ({
+        type: 'single',
+        text: symptom,
+      })),
+    ];
+
+    setSuggestions(combinedSuggestions);
+  };
+
+  const handleSymptomSelect = (suggestion) => {
+    const symptomsToAdd = suggestion.type === 'combination' ? suggestion.symptoms : [suggestion.text];
+    const uniqueNewSymptoms = symptomsToAdd.filter((symptom) => !selectedSymptoms.includes(symptom));
+    if (uniqueNewSymptoms.length > 0) {
+      const updatedSymptoms = [...selectedSymptoms, ...uniqueNewSymptoms];
+      handlePatientInfoChange('symptoms', updatedSymptoms);
       setMessages((prev) => [
         ...prev,
-        { role: 'user', content: `${currentStep.charAt(0).toUpperCase() + currentStep.slice(1)}: ${value}`, isTyping: false },
+        { role: 'user', content: `Added: ${uniqueNewSymptoms.join(', ')}`, isTyping: false },
       ]);
-      const stepIndex = ContextHandler.steps.findIndex((s) => s.name === currentStep);
-      const nextStep = ContextHandler.steps[stepIndex + 1]?.name;
-      if (nextStep) {
-        setCurrentStep(nextStep);
-        addBotMessage(BotMessages.getStepPrompt(nextStep));
-      }
+      addBotMessage(BotMessages.getSymptomPrompt());
     }
-    setSearchTerm('');
+    setInput('');
+    setSuggestions([]);
   };
 
   const handleSubmit = (e) => {
@@ -105,21 +142,107 @@ const SymptomInput = ({
     if (!input.trim()) return;
 
     setMessages((prev) => [...prev, { role: 'user', content: input, isTyping: false }]);
-    ContextHandler.handleContext(
-      input,
-      currentStep,
-      setMessages,
-      addBotMessage,
-      handlePatientInfoChange,
-      setInput,
-      setCurrentStep,
-      {
-        ...patientInfo,
-        travelRiskFactors: parentTravelRiskFactors || travelRiskFactors,
-        riskFactorWeights: parentRiskFactorWeights || riskFactorWeights,
-        drugHistoryWeights: parentDrugHistoryWeights || drugHistoryWeights,
+
+    if (currentStep === 'symptoms' && suggestions.length > 0 && input.toLowerCase() !== 'done') {
+      const matchedSuggestion = suggestions.find(
+        (s) => s.text.toLowerCase() === input.toLowerCase()
+      );
+      if (matchedSuggestion) {
+        handleSymptomSelect(matchedSuggestion);
+        return;
       }
-    );
+    }
+
+    const currentStepConfig = steps.find((step) => step.name === currentStep);
+    const stepIndex = steps.findIndex((s) => s.name === currentStep);
+    const nextStep = steps[stepIndex + 1]?.name;
+
+    if (currentStep === 'welcome') {
+      if (input.toLowerCase() === 'start') {
+        setCurrentStep('age');
+        addBotMessage(BotMessages.getStepPrompt('age'));
+        setInput('');
+        return;
+      } else if (input.toLowerCase() === 'help') {
+        addBotMessage(BotMessages.getHelpMessage());
+        setInput('');
+        return;
+      }
+    } else if (currentStep === 'symptoms' && input.toLowerCase() === 'done') {
+      if ((patientInfo.symptoms || []).length >= 2) {
+        setCurrentStep(nextStep || 'duration');
+        addBotMessage(BotMessages.getStepPrompt(nextStep || 'duration'));
+        setInput('');
+        return;
+      } else {
+        addBotMessage('Please provide at least two symptoms before typing "done".');
+        setInput('');
+        return;
+      }
+    } else if (currentStepConfig && currentStepConfig.validate) {
+      let value = input.toLowerCase();
+      if (currentStep === 'age' || currentStep === 'duration') {
+        const numberMatch = input.match(/\d+/);
+        value = numberMatch ? parseInt(numberMatch[0], 10) : null;
+      } else if (currentStep === 'gender') {
+        value = ['male', 'female', 'other']
+          .find((v) => input.toLowerCase().includes(v)) || value;
+        value = value.charAt(0).toUpperCase() + value.slice(1);
+      } else if (currentStep === 'durationUnit') {
+        value = ['days', 'weeks', 'months']
+          .find((v) => input.toLowerCase().includes(v)) || value;
+        value = value.charAt(0).toUpperCase() + value.slice(1);
+      } else if (currentStep === 'severity') {
+        value = ['mild', 'moderate', 'severe']
+          .find((v) => input.toLowerCase().includes(v)) || value;
+        value = value.charAt(0).toUpperCase() + value.slice(1);
+      } else if (currentStep === 'travelRegion' && input.toLowerCase() === 'none') {
+        value = 'None';
+      } else if (currentStep === 'travelRegion') {
+        value = Object.keys(parentTravelRiskFactors || travelRiskFactors)
+          .find((v) => input.toLowerCase().includes(v.toLowerCase())) || value;
+        value = value.charAt(0).toUpperCase() + value.slice(1);
+      } else if (currentStep === 'riskFactors' && (input.toLowerCase() === 'skip' || input.toLowerCase() === 'none')) {
+        value = [];
+      } else if (currentStep === 'riskFactors') {
+        const riskMatch = Object.keys(parentRiskFactorWeights || riskFactorWeights)
+          .find((risk) => input.toLowerCase().includes(risk.toLowerCase()));
+        if (riskMatch) {
+          const currentRiskFactors = patientInfo.riskFactors || [];
+          value = currentRiskFactors.includes(riskMatch) ? currentRiskFactors : [...currentRiskFactors, riskMatch];
+        }
+      } else if (currentStep === 'drugHistory' && (input.toLowerCase() === 'skip' || input.toLowerCase() === 'none')) {
+        value = 'None';
+      } else if (currentStep === 'drugHistory') {
+        value = Object.keys(parentDrugHistoryWeights || drugHistoryWeights)
+          .find((drug) => input.toLowerCase().includes(drug.toLowerCase())) || value;
+      } else if (currentStep === 'submit' && ['submit', 'done', 'finish'].includes(input.toLowerCase())) {
+        value = true;
+      }
+
+      if (value !== null && currentStepConfig.validate(value, parentTravelRiskFactors || travelRiskFactors, parentRiskFactorWeights || riskFactorWeights, parentDrugHistoryWeights || drugHistoryWeights)) {
+        handlePatientInfoChange(currentStep, value);
+        setInput('');
+        if (currentStep === 'submit') {
+          addBotMessage(BotMessages.getStepPrompt('submit'));
+        } else if (currentStep !== 'symptoms' && currentStep !== 'riskFactors') {
+          if (nextStep) {
+            setCurrentStep(nextStep);
+            addBotMessage(BotMessages.getStepPrompt(nextStep));
+          }
+        } else {
+          addBotMessage(BotMessages.getStepPrompt(currentStep));
+        }
+        return;
+      }
+    }
+
+    if (ContextHandler.handleContext(input, currentStep, setMessages, addBotMessage, setInput)) {
+      return;
+    }
+
+    addBotMessage(BotMessages.getErrorResponse(currentStep));
+    setInput('');
   };
 
   useEffect(() => {
@@ -145,45 +268,6 @@ const SymptomInput = ({
     inputRef.current?.focus();
   }, [messages]);
 
-  const getOptions = () => {
-    let options = [];
-    if (currentStep === 'symptoms') {
-      const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
-      const filteredSymptoms = availableSymptoms
-        .filter(
-          (symptom) =>
-            symptom.toLowerCase().includes(searchTerm.toLowerCase()) &&
-            !selectedSymptoms.includes(symptom)
-        )
-        .sort((a, b) => a.localeCompare(b));
-      const filteredCombinations = Object.keys(symptomCombinations)
-        .filter((combination) =>
-          combination.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        .sort((a, b) => a.localeCompare(b));
-      options = [...filteredSymptoms, ...filteredCombinations];
-    } else if (currentStep === 'riskFactors') {
-      options = Object.keys(parentRiskFactorWeights || riskFactorWeights)
-        .filter((risk) => risk.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => a.localeCompare(b));
-    } else if (currentStep === 'drugHistory') {
-      options = ['None', ...Object.keys(parentDrugHistoryWeights || drugHistoryWeights)]
-        .filter((drug) => drug.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => a.localeCompare(b));
-    } else if (currentStep === 'travelRegion') {
-      options = ['None', ...Object.keys(parentTravelRiskFactors || travelRiskFactors)]
-        .filter((region) => region.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => a.localeCompare(b));
-    } else if (currentStep === 'gender') {
-      options = ['Male', 'Female', 'Other'];
-    } else if (currentStep === 'durationUnit') {
-      options = ['Days', 'Weeks', 'Months'];
-    } else if (currentStep === 'severity') {
-      options = ['Mild', 'Moderate', 'Severe'];
-    }
-    return options;
-  };
-
   return (
     <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4 max-h-[70dvh] flex flex-col">
       <div className="flex-1 overflow-y-auto space-y-2">
@@ -200,73 +284,30 @@ const SymptomInput = ({
         ))}
         <div ref={chatEndRef} />
       </div>
-      {['age', 'gender', 'symptoms', 'duration', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
+      {currentStep === 'symptoms' && suggestions.length > 0 && (
         <div className="space-y-2">
-          {['symptoms', 'riskFactors', 'drugHistory', 'travelRegion'].includes(currentStep) && (
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={`Search ${currentStep}`}
-              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
-            />
-          )}
-          <select
-            onChange={handleSelectChange}
-            value=""
-            multiple={currentStep === 'symptoms' || currentStep === 'riskFactors'}
-            className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
-          >
-            <option value="" disabled>
-              Select {currentStep}
-            </option>
-            {getOptions().map((option, index) => (
-              <option key={index} value={option}>
-                {option}
-              </option>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                onClick={() => handleSymptomSelect(suggestion)}
+                className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
+              >
+                {suggestion.text}
+              </button>
             ))}
-          </select>
-          {(currentStep === 'symptoms' || currentStep === 'riskFactors') && (
-            <div className="flex flex-wrap gap-2">
-              {(patientInfo[currentStep] || []).map((item, index) => (
-                <span
-                  key={index}
-                  className="p-2 bg-secondary text-secondary-foreground rounded-lg text-sm"
-                >
-                  {item}
-                  <button
-                    onClick={() => {
-                      const updatedItems = patientInfo[currentStep].filter((s) => s !== item);
-                      handlePatientInfoChange(currentStep, updatedItems);
-                      setMessages((prev) => [
-                        ...prev,
-                        { role: 'user', content: `Removed: ${item}`, isTyping: false },
-                      ]);
-                      addBotMessage(BotMessages.getStepPrompt(currentStep));
-                    }}
-                    className="ml-2 text-red-500 hover:text-red-700"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          {['symptoms', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
-            <button
-              onClick={() => {
-                if (currentStep === 'symptoms' || currentStep === 'riskFactors') {
-                  handlePatientInfoChange(currentStep, []);
-                } else {
-                  handlePatientInfoChange(currentStep, 'None');
-                }
-              }}
-              className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
-            >
-              Skip
-            </button>
-          )}
+          </div>
         </div>
+      )}
+      {['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
+        <PatientInfoSelector
+          currentStep={currentStep}
+          patientInfo={patientInfo}
+          handlePatientInfoChange={handlePatientInfoChange}
+          travelRiskFactors={parentTravelRiskFactors || travelRiskFactors}
+          riskFactorWeights={parentRiskFactorWeights || riskFactorWeights}
+          drugHistoryWeights={parentDrugHistoryWeights || drugHistoryWeights}
+        />
       )}
       {currentStep !== 'submit' && (
         <form onSubmit={handleSubmit} className="flex items-end gap-2">
@@ -274,14 +315,14 @@ const SymptomInput = ({
             ref={inputRef}
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             placeholder={
               currentStep === 'welcome'
                 ? 'Type "start" or "help"'
                 : currentStep === 'symptoms'
-                ? 'Type "done" when finished'
+                ? 'Type symptoms or "done"'
                 : currentStep === 'riskFactors' || currentStep === 'travelRegion' || currentStep === 'drugHistory'
-                ? 'Type "none" or select above'
+                ? 'Type option or "none"'
                 : currentStep === 'age' || currentStep === 'duration'
                 ? `Enter ${currentStep} (number)`
                 : `Enter ${currentStep}`
