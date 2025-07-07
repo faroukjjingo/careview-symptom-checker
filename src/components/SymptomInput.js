@@ -4,6 +4,8 @@ import { Send } from 'lucide-react';
 import PatientInfoSelector from './PatientInfoSelector';
 import BotMessages from './BotMessages';
 import ContextHandler from './ContextHandler';
+import { symptomList } from './SymptomList';
+import { symptomCombinations } from './SymptomCombinations';
 import { travelRiskFactors } from './TravelRiskFactors';
 import { riskFactorWeights } from './RiskFactorWeights';
 import drugHistoryWeights from './DrugHistoryWeights';
@@ -19,25 +21,45 @@ const SymptomInput = ({
   riskFactorWeights: parentRiskFactorWeights,
   drugHistoryWeights: parentDrugHistoryWeights,
 }) => {
-  const [messages, setMessages] = useState([{ role: 'bot', content: BotMessages.getWelcomeMessage() }]);
+  const [messages, setMessages] = useState([{ role: 'bot', content: BotMessages.getWelcomeMessage(), isTyping: false }]);
   const [input, setInput] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
   const [currentStep, setCurrentStep] = useState('welcome');
   const [isTyping, setIsTyping] = useState(false);
+  const [typingText, setTypingText] = useState('');
+  const [typingIndex, setTypingIndex] = useState(0);
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
 
   const addBotMessage = (text) => {
-    setMessages((prev) => [...prev, { role: 'bot', content: text, isTyping: true }]);
+    setTypingText(text);
+    setTypingIndex(0);
+    setMessages((prev) => [...prev, { role: 'bot', content: '', isTyping: true }]);
     setIsTyping(true);
-    setTimeout(() => {
+  };
+
+  useEffect(() => {
+    if (isTyping && typingText && typingIndex < typingText.length) {
+      const timer = setTimeout(() => {
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1].content = typingText.slice(0, typingIndex + 1);
+          return updated;
+        });
+        setTypingIndex((prev) => prev + 1);
+      }, 30);
+      return () => clearTimeout(timer);
+    } else if (isTyping && typingIndex >= typingText.length) {
       setMessages((prev) => {
         const updated = [...prev];
         updated[updated.length - 1].isTyping = false;
         return updated;
       });
       setIsTyping(false);
-    }, text.length * 30 + 500);
-  };
+      setTypingText('');
+      setTypingIndex(0);
+    }
+  }, [isTyping, typingIndex, typingText]);
 
   const handlePatientInfoChange = (field, value) => {
     setPatientInfo((prev) => ({ ...prev, [field]: value }));
@@ -46,26 +68,90 @@ const SymptomInput = ({
     }
   };
 
+  const handleInputChange = (e) => {
+    const text = e.target.value;
+    setInput(text);
+
+    if (!text.trim() || currentStep !== 'symptoms') {
+      setSuggestions([]);
+      return;
+    }
+
+    const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
+    const filteredSymptoms = availableSymptoms
+      .filter(
+        (symptom) =>
+          symptom.toLowerCase().includes(text.toLowerCase()) &&
+          !selectedSymptoms.includes(symptom)
+      )
+      .slice(0, 5);
+
+    const combinationKeys = Object.keys(symptomCombinations);
+    const filteredCombinations = combinationKeys
+      .filter((combination) => {
+        const symptoms = combination.split(', ');
+        return (
+          symptoms.some((symptom) => symptom.toLowerCase().includes(text.toLowerCase())) &&
+          symptoms.some((symptom) => !selectedSymptoms.includes(symptom))
+        );
+      })
+      .slice(0, 5);
+
+    const combinedSuggestions = [
+      ...filteredCombinations.map((combination) => ({
+        type: 'combination',
+        text: combination,
+        symptoms: combination.split(', '),
+      })),
+      ...filteredSymptoms.map((symptom) => ({
+        type: 'single',
+        text: symptom,
+      })),
+    ];
+
+    setSuggestions(combinedSuggestions);
+  };
+
+  const handleSymptomSelect = (suggestion) => {
+    const symptomsToAdd = suggestion.type === 'combination' ? suggestion.symptoms : [suggestion.text];
+    const uniqueNewSymptoms = symptomsToAdd.filter((symptom) => !selectedSymptoms.includes(symptom));
+    if (uniqueNewSymptoms.length > 0) {
+      const updatedSymptoms = [...selectedSymptoms, ...uniqueNewSymptoms];
+      handlePatientInfoChange('symptoms', updatedSymptoms);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'user', content: `Added: ${uniqueNewSymptoms.join(', ')}`, isTyping: false },
+      ]);
+      addBotMessage(BotMessages.getSymptomPrompt());
+    }
+    setInput('');
+    setSuggestions([]);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    setMessages((prev) => [...prev, { role: 'user', content: input }]);
-    ContextHandler.handleContext(
-      input,
-      currentStep,
-      setMessages,
-      addBotMessage,
-      handlePatientInfoChange,
-      setInput,
-      setCurrentStep,
-      {
-        ...patientInfo,
-        travelRiskFactors: parentTravelRiskFactors || travelRiskFactors,
-        riskFactorWeights: parentRiskFactorWeights || riskFactorWeights,
-        drugHistoryWeights: parentDrugHistoryWeights || drugHistoryWeights,
-      }
-    );
+    setMessages((prev) => [...prev, { role: 'user', content: input, isTyping: false }]);
+    if (currentStep === 'symptoms' && suggestions.length > 0 && !['done', 'none'].includes(input.toLowerCase().trim())) {
+      handleSymptomSelect(suggestions[0]);
+    } else {
+      ContextHandler.handleContext(
+        input,
+        currentStep,
+        setMessages,
+        addBotMessage,
+        handlePatientInfoChange,
+        setInput,
+        setCurrentStep,
+        {
+          ...patientInfo,
+          travelRiskFactors: parentTravelRiskFactors || travelRiskFactors,
+          riskFactorWeights: parentRiskFactorWeights || riskFactorWeights,
+          drugHistoryWeights: parentDrugHistoryWeights || drugHistoryWeights,
+        }
+      );
+    }
   };
 
   useEffect(() => {
@@ -107,6 +193,21 @@ const SymptomInput = ({
         ))}
         <div ref={chatEndRef} />
       </div>
+      {suggestions.length > 0 && currentStep === 'symptoms' && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                onClick={() => handleSymptomSelect(suggestion)}
+                className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
+              >
+                {suggestion.text}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
         <PatientInfoSelector
           currentStep={currentStep}
@@ -123,7 +224,7 @@ const SymptomInput = ({
             ref={inputRef}
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             placeholder={
               currentStep === 'welcome'
                 ? 'Type "start" or "help"'
@@ -133,7 +234,7 @@ const SymptomInput = ({
                 ? `Type option or "none"`
                 : `Enter ${currentStep}`
             }
-            className="flex-1 p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
+            className="flex-1 p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base touch-manipulation"
             disabled={currentStep === 'submit'}
           />
           <button
