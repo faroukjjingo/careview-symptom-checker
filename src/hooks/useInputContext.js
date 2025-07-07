@@ -6,6 +6,72 @@ import BotMessages from '../utils/BotMessages';
 const useInputContext = () => {
   const { patientInfo, startTyping } = useContext(SymptomCheckerContext);
 
+  const contexts = {
+    greetings: ['hi', 'hello', 'hey', 'good morning', 'good evening', 'good afternoon'],
+    farewells: ['bye', 'goodbye', 'see you', 'later'],
+    gratitude: ['thank you', 'thanks', 'appreciate it', 'thx'],
+    apologies: ['sorry', 'my bad', 'apologies', 'oops'],
+    symptomDescription: ['i feel', 'i have', 'i am', 'it hurts', 'having', 'experiencing'],
+    durationOfSymptoms: ['since', 'for', 'days', 'weeks', 'months', 'how long'],
+    severityOfSymptoms: ['bad', 'severe', 'mild', 'moderate', 'intense', 'painful'],
+    locationOfSymptoms: ['in my', 'on my', 'chest', 'head', 'stomach', 'back', 'leg', 'arm'],
+    onset: ['sudden', 'gradual', 'started', 'began', 'came on'],
+    triggersOrCauses: ['triggered by', 'caused by', 'because of', 'after', 'when i'],
+    relievingOrWorseningFactors: ['better when', 'worse when', 'relieved by', 'improves with', 'worsens with'],
+    associatedSymptoms: ['also have', 'and i', 'with a', 'along with'],
+    medicalHistory: ['history of', 'i had', 'past medical', 'previously diagnosed'],
+    medicationUse: ['taking', 'on', 'medication', 'prescribed', 'medicine'],
+    allergies: ['allergic to', 'allergy', 'allergies'],
+    age: ['i am', 'years old', 'age is', 'i’m'],
+    gender: ['i am', 'male', 'female', 'other'],
+    pregnancyStatus: ['pregnant', 'expecting', 'pregnancy'],
+    lifestyleFactors: ['smoke', 'drink', 'alcohol', 'exercise', 'diet'],
+    chronicConditions: ['chronic', 'long term', 'ongoing', 'condition'],
+    familyMedicalHistory: ['family history', 'my family', 'runs in the family'],
+    recentTravel: ['traveled to', 'been to', 'visited', 'travel'],
+    recentExposure: ['exposed to', 'around', 'contact with', 'near'],
+    vaccinationStatus: ['vaccinated', 'vaccine', 'shots', 'immunized'],
+    mentalHealthSymptoms: ['anxious', 'depressed', 'stress', 'mood', 'mental'],
+    requestsForAdvice: ['what should i do', 'advice', 'recommend', 'suggest'],
+    requestsForDiagnosis: ['what’s wrong', 'diagnose', 'what is it', 'what’s the problem'],
+    requestsForEmergencyHelp: ['emergency', 'urgent', 'help now', 'serious'],
+    confusionOrClarification: ['what', 'huh', 'explain', 'clarify', 'don’t understand'],
+    feedbackOrComplaints: ['this is', 'not working', 'issue', 'problem', 'sucks'],
+  };
+
+  const contextResponseMap = {
+    greetings: BotMessages.getGreetingResponse,
+    farewells: BotMessages.getFarewellResponse,
+    gratitude: BotMessages.getGratitudeResponse,
+    apologies: BotMessages.getApologyResponse,
+    symptomDescription: BotMessages.getSymptomDescriptionResponse,
+    durationOfSymptoms: BotMessages.getDurationResponse,
+    severityOfSymptoms: BotMessages.getSeverityResponse,
+    locationOfSymptoms: BotMessages.getLocationResponse,
+    onset: BotMessages.getOnsetResponse,
+    triggersOrCauses: BotMessages.getTriggersResponse,
+    relievingOrWorseningFactors: BotMessages.getRelievingWorseningResponse,
+    associatedSymptoms: BotMessages.getAssociatedSymptomsResponse,
+    medicalHistory: BotMessages.getMedicalHistoryResponse,
+    medicationUse: BotMessages.getMedicationUseResponse,
+    allergies: BotMessages.getAllergiesResponse,
+    age: BotMessages.getAgeResponse,
+    gender: BotMessages.getGenderResponse,
+    pregnancyStatus: BotMessages.getPregnancyResponse,
+    lifestyleFactors: BotMessages.getLifestyleResponse,
+    chronicConditions: BotMessages.getChronicConditionsResponse,
+    familyMedicalHistory: BotMessages.getFamilyHistoryResponse,
+    recentTravel: BotMessages.getRecentTravelResponse,
+    recentExposure: BotMessages.getRecentExposureResponse,
+    vaccinationStatus: BotMessages.getVaccinationResponse,
+    mentalHealthSymptoms: BotMessages.getMentalHealthResponse,
+    requestsForAdvice: BotMessages.getAdviceResponse,
+    requestsForDiagnosis: BotMessages.getDiagnosisResponse,
+    requestsForEmergencyHelp: BotMessages.getEmergencyResponse,
+    confusionOrClarification: BotMessages.getClarificationResponse,
+    feedbackOrComplaints: BotMessages.getFeedbackResponse,
+  };
+
   const processInput = (input, currentStep, patientInfo, suggestions, drugSuggestions) => {
     const inputLower = input.toLowerCase().trim();
     const currentStepConfig = steps.find((step) => step.name === currentStep);
@@ -16,6 +82,8 @@ const useInputContext = () => {
         startTyping(BotMessages.getHelpMessage());
         return { isValid: false, response: BotMessages.getHelpMessage() };
       }
+      startTyping(BotMessages.getInvalidWelcomeMessage());
+      return { isValid: false, response: BotMessages.getInvalidWelcomeMessage() };
     } else if (currentStep === 'symptoms' && inputLower === 'done') {
       if ((patientInfo.symptoms || []).length >= 2) {
         return { isValid: true, value: patientInfo.symptoms };
@@ -70,6 +138,14 @@ const useInputContext = () => {
 
     if (value !== null && currentStepConfig?.validate(value, patientInfo.travelRiskFactors, patientInfo.riskFactorWeights, patientInfo.drugHistoryWeights)) {
       return { isValid: true, value };
+    }
+
+    for (const [context, keywords] of Object.entries(contexts)) {
+      if (keywords.some((keyword) => inputLower.includes(keyword))) {
+        const response = contextResponseMap[context](currentStep);
+        startTyping(response);
+        return { isValid: false, response };
+      }
     }
 
     const errorResponse = BotMessages.getErrorResponse(currentStep);
