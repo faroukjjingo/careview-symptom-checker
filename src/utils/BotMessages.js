@@ -1987,176 +1987,159 @@ welcomeMessages: [
   ],
 },
 
-  getWelcomeMessage: () => {
-    return BotMessages.welcomeMessages[Math.floor(Math.random() * BotMessages.welcomeMessages.length)];
+  getRandomMessage(messages) {
+    return messages[Math.floor(Math.random() * messages.length)];
   },
 
-  getHelpMessage: () => {
-    return BotMessages.helpMessages[Math.floor(Math.random() * BotMessages.helpMessages.length)];
+  getWelcomeMessage() {
+    return this.getRandomMessage(this.welcomeMessages);
   },
 
-  getInvalidWelcomeMessage: () => {
-    return BotMessages.invalidWelcomeMessages[Math.floor(Math.random() * BotMessages.invalidWelcomeMessages.length)];
+  getHelpMessage() {
+    return this.getRandomMessage(this.helpMessages);
   },
 
-  getSymptomPrompt: () => {
-    return BotMessages.symptomPrompts[Math.floor(Math.random() * BotMessages.symptomPrompts.length)];
+  getInvalidWelcomeMessage() {
+    return this.getRandomMessage(this.invalidWelcomeMessages);
   },
 
-  getStepPrompt: (step) => {
-    const prompts = BotMessages.stepPrompts[step] || [''];
-    return prompts[Math.floor(Math.random() * prompts.length)];
+  getSymptomPrompt() {
+    return this.getRandomMessage(this.symptomPrompts);
   },
 
-  getGreetingResponse: (step) => {
-    const responses = step === 'welcome' ? BotMessages.greetingResponses.welcome : BotMessages.greetingResponses.default;
-    let response = responses[Math.floor(Math.random() * responses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getStepPrompt(step) {
+    return this.getRandomMessage(this.stepPrompts[step] || ['Please provide the required information.']);
   },
 
-  getFarewellResponse: (step) => {
-    let response = BotMessages.farewellResponses[Math.floor(Math.random() * BotMessages.farewellResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getResponse(type, step) {
+    const responses = this.responseTypes[type] || [];
+    const stepResponses = Array.isArray(responses[step]) ? responses[step] : responses.default || responses;
+    return this.getRandomMessage(stepResponses).replace('{stepPrompt}', this.getStepPrompt(step));
   },
 
-  getGratitudeResponse: (step) => {
-    let response = BotMessages.gratitudeResponses[Math.floor(Math.random() * BotMessages.gratitudeResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getGreetingResponse(step) {
+    return this.getResponse('greetingResponses', step);
   },
 
-  getApologyResponse: (step) => {
-    let response = BotMessages.apologyResponses[Math.floor(Math.random() * BotMessages.apologyResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getFarewellResponse(step) {
+    return this.getResponse('farewellResponses', step);
   },
 
-  getSymptomDescriptionResponse: (step) => {
-    let response = BotMessages.symptomDescriptionResponses[Math.floor(Math.random() * BotMessages.symptomDescriptionResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getGratitudeResponse(step) {
+    return this.getResponse('gratitudeResponses', step);
   },
 
-  getDurationResponse: (step) => {
-    let response = BotMessages.durationResponses[Math.floor(Math.random() * BotMessages.durationResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getApologyResponse(step) {
+    return this.getResponse('apologyResponses', step);
   },
 
-  getSeverityResponse: (step) => {
-    let response = BotMessages.severityResponses[Math.floor(Math.random() * BotMessages.severityResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getSymptomDescriptionResponse(step) {
+    return this.getResponse('symptomDescriptionResponses', step);
   },
 
-  getLocationResponse: (step) => {
-    let response = BotMessages.locationResponses[Math.floor(Math.random() * BotMessages.locationResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getDurationResponse(step) {
+    return this.getResponse('durationResponses', step);
   },
 
-  getOnsetResponse: (step) => {
-    let response = BotMessages.onsetResponses[Math.floor(Math.random() * BotMessages.onsetResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getSeverityResponse(step) {
+    return this.getResponse('severityResponses', step);
   },
 
-  getTriggersResponse: (step) => {
-    let response = BotMessages.triggersResponses[Math.floor(Math.random() * BotMessages.triggersResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getLocationResponse(step) {
+    return this.getResponse('locationResponses', step);
   },
 
-  getRelievingWorseningResponse: (step) => {
-    let response = BotMessages.relievingWorseningResponses[Math.floor(Math.random() * BotMessages.relievingWorseningResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getOnsetResponse(step) {
+    return this.getResponse('onsetResponses', step);
   },
 
-  getAssociatedSymptomsResponse: (step) => {
-    let response = BotMessages.associatedSymptomsResponses[Math.floor(Math.random() * BotMessages.associatedSymptomsResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getTriggersResponse(step) {
+    return this.getResponse('triggersResponses', step);
   },
 
-  getMedicalHistoryResponse: (step) => {
-    let response = BotMessages.medicalHistoryResponses[Math.floor(Math.random() * BotMessages.medicalHistoryResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getRelievingWorseningResponse(step) {
+    return this.getResponse('relievingWorseningResponses', step);
   },
 
-  getMedicationUseResponse: (step) => {
-    let response = BotMessages.medicationUseResponses[Math.floor(Math.random() * BotMessages.medicationUseResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getAssociatedSymptomsResponse(step) {
+    return this.getResponse('associatedSymptomsResponses', step);
   },
 
-  getAllergiesResponse: (step) => {
-    let response = BotMessages.allergiesResponses[Math.floor(Math.random() * BotMessages.allergiesResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getMedicalHistoryResponse(step) {
+    return this.getResponse('medicalHistoryResponses', step);
   },
 
-  getAgeResponse: (step) => {
-    let response = BotMessages.ageResponses[Math.floor(Math.random() * BotMessages.ageResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getMedicationUseResponse(step) {
+    return this.getResponse('medicationUseResponses', step);
   },
 
-  getGenderResponse: (step) => {
-    let response = BotMessages.genderResponses[Math.floor(Math.random() * BotMessages.genderResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getAllergiesResponse(step) {
+    return this.getResponse('allergiesResponses', step);
   },
 
-  getPregnancyResponse: (step) => {
-    let response = BotMessages.pregnancyResponses[Math.floor(Math.random() * BotMessages.pregnancyResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getAgeResponse(step) {
+    return this.getResponse('ageResponses', step);
   },
 
-  getLifestyleResponse: (step) => {
-    let response = BotMessages.lifestyleResponses[Math.floor(Math.random() * BotMessages.lifestyleResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getGenderResponse(step) {
+    return this.getResponse('genderResponses', step);
   },
 
-  getChronicConditionsResponse: (step) => {
-    let response = BotMessages.chronicConditionsResponses[Math.floor(Math.random() * BotMessages.chronicConditionsResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getPregnancyResponse(step) {
+    return this.getResponse('pregnancyResponses', step);
   },
 
-  getFamilyHistoryResponse: (step) => {
-    let response = BotMessages.familyHistoryResponses[Math.floor(Math.random() * BotMessages.familyHistoryResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getLifestyleResponse(step) {
+    return this.getResponse('lifestyleResponses', step);
   },
 
-  getRecentTravelResponse: (step) => {
-    let response = BotMessages.recentTravelResponses[Math.floor(Math.random() * BotMessages.recentTravelResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getChronicConditionsResponse(step) {
+    return this.getResponse('chronicConditionsResponses', step);
   },
 
-  getRecentExposureResponse: (step) => {
-    let response = BotMessages.recentExposureResponses[Math.floor(Math.random() * BotMessages.recentExposureResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getFamilyHistoryResponse(step) {
+    return this.getResponse('familyHistoryResponses', step);
   },
 
-  getVaccinationResponse: (step) => {
-    let response = BotMessages.vaccinationResponses[Math.floor(Math.random() * BotMessages.vaccinationResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getRecentTravelResponse(step) {
+    return this.getResponse('recentTravelResponses', step);
   },
 
-  getMentalHealthResponse: (step) => {
-    let response = BotMessages.mentalHealthResponses[Math.floor(Math.random() * BotMessages.mentalHealthResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getRecentExposureResponse(step) {
+    return this.getResponse('recentExposureResponses', step);
   },
 
-  getAdviceResponse: (step) => {
-    let response = BotMessages.adviceResponses[Math.floor(Math.random() * BotMessages.adviceResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getVaccinationResponse(step) {
+    return this.getResponse('vaccinationResponses', step);
   },
 
-  getDiagnosisResponse: (step) => {
-    let response = BotMessages.diagnosisResponses[Math.floor(Math.random() * BotMessages.diagnosisResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getMentalHealthResponse(step) {
+    return this.getResponse('mentalHealthResponses', step);
   },
 
-  getEmergencyResponse: (step) => {
-    let response = BotMessages.emergencyResponses[Math.floor(Math.random() * BotMessages.emergencyResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getAdviceResponse(step) {
+    return this.getResponse('adviceResponses', step);
   },
 
-  getClarificationResponse: (step) => {
-    let response = BotMessages.clarificationResponses[Math.floor(Math.random() * BotMessages.clarificationResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getDiagnosisResponse(step) {
+    return this.getResponse('diagnosisResponses', step);
   },
 
-  getFeedbackResponse: (step) => {
-    let response = BotMessages.feedbackResponses[Math.floor(Math.random() * BotMessages.feedbackResponses.length)];
-    return response.replace('{stepPrompt}', BotMessages.getStepPrompt(step));
+  getEmergencyResponse(step) {
+    return this.getResponse('emergencyResponses', step);
+  },
+
+  getClarificationResponse(step) {
+    return this.getResponse('clarificationResponses', step);
+  },
+
+  getFeedbackResponse(step) {
+    return this.getResponse('feedbackResponses', step);
+  },
+
+  getErrorResponse(step) {
+    const stepConfig = steps.find((s) => s.name === step);
+    return stepConfig ? `Invalid input for ${step}. ${this.getStepPrompt(step)}` : 'Sorry, something went wrong. Please try again.';
   },
 };
 
