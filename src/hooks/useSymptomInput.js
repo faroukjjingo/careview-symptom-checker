@@ -1,6 +1,7 @@
 import { useState, useContext, useEffect } from 'react';
 import { SymptomCheckerContext } from '../context/SymptomCheckerContext';
-import { symptomList, symptomCombinations } from '../data/SymptomData';
+import { symptomCombinations } from '../data/SymptomCombinations';
+import { symptomList } from '../data/SymptomList';
 import { drugOptions } from '../data/DrugOptions';
 import { steps } from '../data/Steps';
 import BotMessages from '../utils/BotMessages';
