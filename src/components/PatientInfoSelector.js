@@ -1,5 +1,5 @@
 // src/components/PatientInfoSelector.jsx
-import React, { useState } from 'react';
+import React from 'react';
 
 const PatientInfoSelector = ({
   currentStep,
@@ -9,32 +9,13 @@ const PatientInfoSelector = ({
   riskFactorWeights,
   drugHistoryWeights,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const getOptions = () => {
-    let options = [];
-    if (currentStep === 'age' || currentStep === 'duration') {
-      return []; // Text input handled by SymptomInput
-    } else if (currentStep === 'gender') {
-      options = ['Male', 'Female', 'Other'];
-    } else if (currentStep === 'durationUnit') {
-      options = ['Days', 'Weeks', 'Months'];
-    } else if (currentStep === 'severity') {
-      options = ['Mild', 'Moderate', 'Severe'];
-    } else if (currentStep === 'travelRegion') {
-      options = ['None', ...Object.keys(travelRiskFactors)]
-        .filter((region) => region.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => a.localeCompare(b));
-    } else if (currentStep === 'riskFactors') {
-      options = Object.keys(riskFactorWeights)
-        .filter((risk) => risk.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => a.localeCompare(b));
-    } else if (currentStep === 'drugHistory') {
-      options = ['None', ...Object.keys(drugHistoryWeights)]
-        .filter((drug) => drug.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => a.localeCompare(b));
-    }
-    return options;
+  const options = {
+    gender: ['Male', 'Female', 'Other'],
+    durationUnit: ['Days', 'Weeks', 'Months'],
+    severity: ['Mild', 'Moderate', 'Severe'],
+    travelRegion: ['None', ...Object.keys(travelRiskFactors)].sort((a, b) => a.localeCompare(b)),
+    riskFactors: Object.keys(riskFactorWeights).sort((a, b) => a.localeCompare(b)),
+    drugHistory: ['None', ...Object.keys(drugHistoryWeights)].sort((a, b) => a.localeCompare(b)),
   };
 
   const handleSelect = (e) => {
@@ -50,20 +31,10 @@ const PatientInfoSelector = ({
     } else {
       handlePatientInfoChange(currentStep, value);
     }
-    setSearchTerm('');
   };
 
   return (
     <div className="space-y-2">
-      {['travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder={`Search ${currentStep}`}
-          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
-        />
-      )}
       {currentStep !== 'age' && currentStep !== 'duration' && (
         <select
           onChange={handleSelect}
@@ -74,7 +45,7 @@ const PatientInfoSelector = ({
           <option value="" disabled>
             Select {currentStep}
           </option>
-          {getOptions().map((option, index) => (
+          {options[currentStep].map((option, index) => (
             <option key={index} value={option}>
               {option}
             </option>
