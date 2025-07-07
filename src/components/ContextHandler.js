@@ -1,6 +1,21 @@
 // src/components/ContextHandler.js
 import BotMessages from './BotMessages';
 
+// Define steps within ContextHandler to avoid undefined error
+const steps = [
+  { name: 'welcome', validate: (value) => ['start', 'help'].includes(value.toLowerCase()) },
+  { name: 'age', validate: (value) => !isNaN(value) && value > 0 && value <= 120 },
+  { name: 'gender', validate: (value) => ['male', 'female', 'other'].includes(value.toLowerCase()) },
+  { name: 'symptoms', validate: (value) => Array.isArray(value) && value.length >= 2 },
+  { name: 'duration', validate: (value) => !isNaN(value) && value > 0 },
+  { name: 'durationUnit', validate: (value) => ['days', 'weeks', 'months'].includes(value.toLowerCase()) },
+  { name: 'severity', validate: (value) => ['mild', 'moderate', 'severe'].includes(value.toLowerCase()) },
+  { name: 'travelRegion', validate: (value, travelRiskFactors) => ['none', ...Object.keys(travelRiskFactors || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
+  { name: 'riskFactors', validate: (value, riskFactorWeights) => Array.isArray(value) && (value.length === 0 || value.every((v) => Object.keys(riskFactorWeights || {}).includes(v))) },
+  { name: 'drugHistory', validate: (value, drugHistoryWeights) => ['none', ...Object.keys(drugHistoryWeights || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
+  { name: 'submit', validate: () => true },
+];
+
 const ContextHandler = {
   contexts: {
     greetings: ['hi', 'hello', 'hey', 'good morning', 'good evening', 'good afternoon'],
@@ -35,9 +50,11 @@ const ContextHandler = {
     feedbackOrComplaints: ['this is', 'not working', 'issue', 'problem', 'sucks'],
   },
 
-  handleContext(input, currentStep, setMessages, addBotMessage, setInput, patientInfo) {
+  handleContext(input, currentStep, setMessages, addBotMessage, setInput, setCurrentStep, patientInfo) {
     const inputLower = input.toLowerCase().trim();
     const currentStepConfig = steps.find((step) => step.name === currentStep);
+    const stepIndex = steps.findIndex((s) => s.name === currentStep);
+    const nextStep = steps[stepIndex + 1]?.name;
 
     // Skip context handling if input is valid for the current step
     let value = inputLower;
@@ -46,23 +63,34 @@ const ContextHandler = {
       value = numberMatch ? parseInt(numberMatch[0], 10) : null;
     } else if (currentStep === 'gender') {
       value = ['male', 'female', 'other'].find((v) => inputLower.includes(v)) || value;
+      value = value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
     } else if (currentStep === 'durationUnit') {
       value = ['days', 'weeks', 'months'].find((v) => inputLower.includes(v)) || value;
+      value = value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
     } else if (currentStep === 'severity') {
       value = ['mild', 'moderate', 'severe'].find((v) => inputLower.includes(v)) || value;
+      value = value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
     } else if (currentStep === 'travelRegion') {
       value = ['none', ...Object.keys(patientInfo.travelRiskFactors || {})]
         .find((v) => inputLower.includes(v.toLowerCase())) || value;
+      value = value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
     } else if (currentStep === 'riskFactors') {
-      value = inputLower === 'none' || inputLower === 'skip' ? [] :
-        Object.keys(patientInfo.riskFactorWeights || {})
-          .find((risk) => inputLower.includes(risk.toLowerCase())) ?
-          [...(patientInfo.riskFactors || []), 
-            Object.keys(patientInfo.riskFactorWeights || {})
-              .find((risk) => inputLower.includes(risk.toLowerCase()))] : null;
+      if (inputLower === 'none' || inputLower === 'skip') {
+        value = [];
+      } else {
+        const riskMatch = Object.keys(patientInfo.riskFactorWeights || {})
+          .find((risk) => inputLower.includes(risk.toLowerCase()));
+        if (riskMatch) {
+          const currentRiskFactors = patientInfo.riskFactors || [];
+          value = currentRiskFactors.includes(riskMatch) ? currentRiskFactors : [...currentRiskFactors, riskMatch];
+        } else {
+          value = null;
+        }
+      }
     } else if (currentStep === 'drugHistory') {
       value = ['none', ...Object.keys(patientInfo.drugHistoryWeights || {})]
         .find((v) => inputLower.includes(v.toLowerCase())) || value;
+      value = value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
     } else if (currentStep === 'symptoms' && inputLower === 'done') {
       value = patientInfo.symptoms || [];
     } else if (currentStep === 'welcome') {
