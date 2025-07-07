@@ -1,5 +1,5 @@
 import React from 'react';
-import { steps } fron '../data/steps';
+import { steps } from '../data/steps';
 
 const BotMessages = {
 welcomeMessages: [
