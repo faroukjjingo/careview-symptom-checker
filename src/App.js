@@ -1,7 +1,6 @@
-// src/App.jsx
 import React, { useState } from 'react';
-import Checker from './components/Checker';
 import Header from './components/Header';
+import Checker from './components/Checker';
 import './index.css';
 
 function App() {
