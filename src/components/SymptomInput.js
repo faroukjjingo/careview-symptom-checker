@@ -23,7 +23,7 @@ const SymptomInput = ({
 }) => {
   const [messages, setMessages] = useState([{ role: 'bot', content: BotMessages.getWelcomeMessage(), isTyping: false }]);
   const [input, setInput] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentStep, setCurrentStep] = useState('welcome');
   const [isTyping, setIsTyping] = useState(false);
   const [typingText, setTypingText] = useState('');
@@ -68,64 +68,38 @@ const SymptomInput = ({
     }
   };
 
-  const handleInputChange = (e) => {
-    const text = e.target.value;
-    setInput(text);
+  const handleSelectChange = (e) => {
+    const value = e.target.value;
+    if (!value) return;
 
-    if (!text.trim() || currentStep !== 'symptoms') {
-      setSuggestions([]);
-      return;
-    }
-
-    const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
-    const filteredSymptoms = availableSymptoms
-      .filter(
-        (symptom) =>
-          symptom.toLowerCase().includes(text.toLowerCase()) &&
-          !selectedSymptoms.includes(symptom)
-      )
-      .slice(0, 5);
-
-    const combinationKeys = Object.keys(symptomCombinations);
-    const filteredCombinations = combinationKeys
-      .filter((combination) => {
-        const symptoms = combination.split(', ');
-        return (
-          symptoms.some((symptom) => symptom.toLowerCase().includes(text.toLowerCase())) &&
-          symptoms.some((symptom) => !selectedSymptoms.includes(symptom))
-        );
-      })
-      .slice(0, 5);
-
-    const combinedSuggestions = [
-      ...filteredCombinations.map((combination) => ({
-        type: 'combination',
-        text: combination,
-        symptoms: combination.split(', '),
-      })),
-      ...filteredSymptoms.map((symptom) => ({
-        type: 'single',
-        text: symptom,
-      })),
-    ];
-
-    setSuggestions(combinedSuggestions);
-  };
-
-  const handleSymptomSelect = (suggestion) => {
-    const symptomsToAdd = suggestion.type === 'combination' ? suggestion.symptoms : [suggestion.text];
-    const uniqueNewSymptoms = symptomsToAdd.filter((symptom) => !selectedSymptoms.includes(symptom));
-    if (uniqueNewSymptoms.length > 0) {
-      const updatedSymptoms = [...selectedSymptoms, ...uniqueNewSymptoms];
-      handlePatientInfoChange('symptoms', updatedSymptoms);
+    if (currentStep === 'symptoms') {
+      const symptomsToAdd = value.includes(', ') ? value.split(', ') : [value];
+      const uniqueNewSymptoms = symptomsToAdd.filter((symptom) => !selectedSymptoms.includes(symptom));
+      if (uniqueNewSymptoms.length > 0) {
+        const updatedSymptoms = [...selectedSymptoms, ...uniqueNewSymptoms];
+        handlePatientInfoChange('symptoms', updatedSymptoms);
+        setMessages((prev) => [
+          ...prev,
+          { role: 'user', content: `Added: ${uniqueNewSymptoms.join(', ')}`, isTyping: false },
+        ]);
+        addBotMessage(BotMessages.getSymptomPrompt());
+      }
+    } else {
+      handlePatientInfoChange(currentStep, value);
       setMessages((prev) => [
         ...prev,
-        { role: 'user', content: `Added: ${uniqueNewSymptoms.join(', ')}`, isTyping: false },
+        { role: 'user', content: `${currentStep.charAt(0).toUpperCase() + currentStep.slice(1)}: ${value}`, isTyping: false },
       ]);
-      addBotMessage(BotMessages.getSymptomPrompt());
+      const nextStep = ['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep)
+        ? ContextHandler.steps[ContextHandler.steps.findIndex((s) => s.name === currentStep) + 1]?.name
+        : null;
+      if (nextStep) {
+        setCurrentStep(nextStep);
+        addBotMessage(BotMessages.getStepPrompt(nextStep));
+      }
     }
+    setSearchTerm('');
     setInput('');
-    setSuggestions([]);
   };
 
   const handleSubmit = (e) => {
@@ -133,25 +107,21 @@ const SymptomInput = ({
     if (!input.trim()) return;
 
     setMessages((prev) => [...prev, { role: 'user', content: input, isTyping: false }]);
-    if (currentStep === 'symptoms' && suggestions.length > 0 && !['done', 'none'].includes(input.toLowerCase().trim())) {
-      handleSymptomSelect(suggestions[0]);
-    } else {
-      ContextHandler.handleContext(
-        input,
-        currentStep,
-        setMessages,
-        addBotMessage,
-        handlePatientInfoChange,
-        setInput,
-        setCurrentStep,
-        {
-          ...patientInfo,
-          travelRiskFactors: parentTravelRiskFactors || travelRiskFactors,
-          riskFactorWeights: parentRiskFactorWeights || riskFactorWeights,
-          drugHistoryWeights: parentDrugHistoryWeights || drugHistoryWeights,
-        }
-      );
-    }
+    ContextHandler.handleContext(
+      input,
+      currentStep,
+      setMessages,
+      addBotMessage,
+      handlePatientInfoChange,
+      setInput,
+      setCurrentStep,
+      {
+        ...patientInfo,
+        travelRiskFactors: parentTravelRiskFactors || travelRiskFactors,
+        riskFactorWeights: parentRiskFactorWeights || riskFactorWeights,
+        drugHistoryWeights: parentDrugHistoryWeights || drugHistoryWeights,
+      }
+    );
   };
 
   useEffect(() => {
@@ -177,6 +147,45 @@ const SymptomInput = ({
     inputRef.current?.focus();
   }, [messages]);
 
+  const getOptions = () => {
+    let options = [];
+    if (currentStep === 'symptoms') {
+      const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
+      const filteredSymptoms = availableSymptoms
+        .filter(
+          (symptom) =>
+            symptom.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            !selectedSymptoms.includes(symptom)
+        )
+        .sort((a, b) => a.localeCompare(b));
+      const filteredCombinations = Object.keys(symptomCombinations)
+        .filter((combination) =>
+          combination.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => a.localeCompare(b));
+      options = [...filteredSymptoms, ...filteredCombinations];
+    } else if (currentStep === 'riskFactors') {
+      options = Object.keys(parentRiskFactorWeights || riskFactorWeights)
+        .filter((risk) => risk.toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => a.localeCompare(b));
+    } else if (currentStep === 'drugHistory') {
+      options = ['None', ...Object.keys(parentDrugHistoryWeights || drugHistoryWeights)]
+        .filter((drug) => drug.toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => a.localeCompare(b));
+    } else if (currentStep === 'travelRegion') {
+      options = ['None', ...Object.keys(parentTravelRiskFactors || travelRiskFactors)]
+        .filter((region) => region.toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => a.localeCompare(b));
+    } else if (currentStep === 'gender') {
+      options = ['Male', 'Female', 'Other'];
+    } else if (currentStep === 'durationUnit') {
+      options = ['Days', 'Weeks', 'Months'];
+    } else if (currentStep === 'severity') {
+      options = ['Mild', 'Moderate', 'Severe'];
+    }
+    return options;
+  };
+
   return (
     <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4 max-h-[70dvh] flex flex-col">
       <div className="flex-1 overflow-y-auto space-y-2">
@@ -193,30 +202,56 @@ const SymptomInput = ({
         ))}
         <div ref={chatEndRef} />
       </div>
-      {suggestions.length > 0 && currentStep === 'symptoms' && (
+      {['symptoms', 'gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => handleSymptomSelect(suggestion)}
-                className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
-              >
-                {suggestion.text}
-              </button>
+          {['symptoms', 'riskFactors', 'drugHistory', 'travelRegion'].includes(currentStep) && (
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={`Search ${currentStep}`}
+              className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
+            />
+          )}
+          <select
+            onChange={handleSelectChange}
+            value=""
+            className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
+          >
+            <option value="">Select {currentStep}</option>
+            {getOptions().map((option, index) => (
+              <option key={index} value={option}>
+                {option}
+              </option>
             ))}
-          </div>
+          </select>
+          {currentStep === 'symptoms' && (
+            <div className="flex flex-wrap gap-2">
+              {selectedSymptoms.map((symptom, index) => (
+                <span
+                  key={index}
+                  className="p-2 bg-secondary text-secondary-foreground rounded-lg text-sm"
+                >
+                  {symptom}
+                  <button
+                    onClick={() => {
+                      const updatedSymptoms = selectedSymptoms.filter((s) => s !== symptom);
+                      handlePatientInfoChange('symptoms', updatedSymptoms);
+                      setMessages((prev) => [
+                        ...prev,
+                        { role: 'user', content: `Removed: ${symptom}`, isTyping: false },
+                      ]);
+                      addBotMessage(BotMessages.getSymptomPrompt());
+                    }}
+                    className="ml-2 text-red-500 hover:text-red-700"
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-      {['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
-        <PatientInfoSelector
-          currentStep={currentStep}
-          patientInfo={patientInfo}
-          handlePatientInfoChange={handlePatientInfoChange}
-          travelRiskFactors={parentTravelRiskFactors || travelRiskFactors}
-          riskFactorWeights={parentRiskFactorWeights || riskFactorWeights}
-          drugHistoryWeights={parentDrugHistoryWeights || drugHistoryWeights}
-        />
       )}
       {currentStep !== 'submit' && (
         <form onSubmit={handleSubmit} className="flex items-end gap-2">
@@ -224,14 +259,14 @@ const SymptomInput = ({
             ref={inputRef}
             type="text"
             value={input}
-            onChange={handleInputChange}
+            onChange={(e) => setInput(e.target.value)}
             placeholder={
               currentStep === 'welcome'
                 ? 'Type "start" or "help"'
                 : currentStep === 'symptoms'
-                ? 'Type symptoms or type "done"'
+                ? 'Type "done" when finished'
                 : currentStep === 'riskFactors' || currentStep === 'travelRegion' || currentStep === 'drugHistory'
-                ? `Type option or "none"`
+                ? 'Type "none" or select above'
                 : `Enter ${currentStep}`
             }
             className="flex-1 p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base touch-manipulation"
