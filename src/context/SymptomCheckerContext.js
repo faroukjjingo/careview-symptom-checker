@@ -33,17 +33,31 @@ export const SymptomCheckerProvider = ({ children, initialPatientInfo }) => {
   const { startTyping, cancelTyping } = useTypingEffect(setMessages);
 
   const handlePatientInfoChange = (field, value) => {
+    console.log(`Updating ${field} with value: ${JSON.stringify(value)}`); // Debug log
     setPatientInfo((prev) => ({ ...prev, [field]: value }));
     if (field === 'symptoms') {
       setSelectedSymptoms(value);
     }
-    if (field !== 'symptoms' && field !== 'riskFactors' && field !== 'drugHistory') {
-      const stepIndex = steps.findIndex((s) => s.name === field);
-      const nextStep = steps[stepIndex + 1]?.name;
-      if (nextStep) {
+    const stepIndex = steps.findIndex((s) => s.name === field);
+    const nextStep = steps[stepIndex + 1]?.name;
+    if (nextStep) {
+      if (field === 'symptoms' && value.length >= 2 && (patientInfo[field] || []).length >= 2) {
+        console.log(`Advancing from symptoms to ${nextStep}`); // Debug log
+        setCurrentStep(nextStep);
+        startTyping(BotMessages.getStepPrompt(nextStep));
+      } else if (field === 'riskFactors' || field === 'drugHistory') {
+        if (Array.isArray(value) && (value.length > 0 || value.length === 0)) { // Allow empty arrays for 'none'
+          console.log(`Advancing from ${field} to ${nextStep}`); // Debug log
+          setCurrentStep(nextStep);
+          startTyping(BotMessages.getStepPrompt(nextStep));
+        }
+      } else if (field !== 'symptoms') {
+        console.log(`Advancing from ${field} to ${nextStep}`); // Debug log
         setCurrentStep(nextStep);
         startTyping(BotMessages.getStepPrompt(nextStep));
       }
+    } else {
+      console.log(`No next step found after ${field}`); // Debug log
     }
   };
 
