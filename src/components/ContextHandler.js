@@ -3,15 +3,15 @@ import BotMessages from './BotMessages';
 
 const steps = [
   { name: 'welcome', validate: (value) => ['start', 'help'].includes(value.toLowerCase()) },
-  { name: 'gender', validate: (value) => ['Male', 'Female', 'Other'].includes(value) },
-  { name: 'symptoms', validate: (value) => Array.isArray(value) && value.length >= 2 },
   { name: 'age', validate: (value) => !isNaN(value) && value > 0 && value <= 120 },
+  { name: 'gender', validate: (value) => ['male', 'female', 'other'].includes(value.toLowerCase()) },
+  { name: 'symptoms', validate: (value) => Array.isArray(value) && value.length >= 2 },
   { name: 'duration', validate: (value) => !isNaN(value) && value > 0 },
-  { name: 'durationUnit', validate: (value) => ['Days', 'Weeks', 'Months'].includes(value) },
-  { name: 'severity', validate: (value) => ['Mild', 'Moderate', 'Severe'].includes(value) },
-  { name: 'travelRegion', validate: (value, travelRiskFactors) => [...Object.keys(travelRiskFactors || {}), 'None'].includes(value) },
+  { name: 'durationUnit', validate: (value) => ['days', 'weeks', 'months'].includes(value.toLowerCase()) },
+  { name: 'severity', validate: (value) => ['mild', 'moderate', 'severe'].includes(value.toLowerCase()) },
+  { name: 'travelRegion', validate: (value, travelRiskFactors) => [...Object.keys(travelRiskFactors || {}), 'none'].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
   { name: 'riskFactors', validate: (value, riskFactorWeights) => Array.isArray(value) && (value.length === 0 || value.every((v) => Object.keys(riskFactorWeights || {}).includes(v))) },
-  { name: 'drugHistory', validate: (value, drugHistoryWeights) => ['None', ...Object.keys(drugHistoryWeights || {})].includes(value) },
+  { name: 'drugHistory', validate: (value, drugHistoryWeights) => ['none', ...Object.keys(drugHistoryWeights || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
   { name: 'submit', validate: () => true },
 ];
 
@@ -52,12 +52,14 @@ const ContextHandler = {
   handleContext(input, currentStep, setMessages, addBotMessage, handlePatientInfoChange, setInput, setCurrentStep, patientInfo) {
     const inputLower = input.toLowerCase().trim();
     const currentStepConfig = steps.find((step) => step.name === currentStep);
+    const stepIndex = steps.findIndex((s) => s.name === currentStep);
+    const nextStep = steps[stepIndex + 1]?.name;
 
     // Handle 'welcome' step
     if (currentStep === 'welcome') {
       if (inputLower === 'start') {
-        setCurrentStep('gender');
-        addBotMessage(BotMessages.getStepPrompt('gender'));
+        setCurrentStep('age');
+        addBotMessage(BotMessages.getStepPrompt('age'));
         setInput('');
         return true;
       } else if (inputLower === 'help') {
@@ -73,8 +75,8 @@ const ContextHandler = {
     // Handle 'done' for symptoms
     if (currentStep === 'symptoms' && inputLower === 'done') {
       if ((patientInfo.symptoms || []).length >= 2) {
-        setCurrentStep('age');
-        addBotMessage(BotMessages.getStepPrompt('age'));
+        setCurrentStep(nextStep || 'duration');
+        addBotMessage(BotMessages.getStepPrompt(nextStep || 'duration'));
         setInput('');
         return true;
       } else {
@@ -90,12 +92,22 @@ const ContextHandler = {
       if (currentStep === 'age' || currentStep === 'duration') {
         const numberMatch = inputLower.match(/\d+/);
         value = numberMatch ? parseInt(numberMatch[0], 10) : null;
-      } else if (['gender', 'durationUnit', 'severity'].includes(currentStep)) {
-        value = ['male', 'female', 'other', 'days', 'weeks', 'months', 'mild', 'moderate', 'severe']
+      } else if (currentStep === 'gender') {
+        value = ['male', 'female', 'other']
           .find((v) => inputLower.includes(v)) || value;
         value = value.charAt(0).toUpperCase() + value.slice(1);
+      } else if (currentStep === 'durationUnit') {
+        value = ['days', 'weeks', 'months']
+          .find((v) => inputLower.includes(v)) || value;
+        value = value.charAt(0).toUpperCase() + value.slice(1);
+      } else if (currentStep === 'severity') {
+        value = ['mild', 'moderate', 'severe']
+          .find((v) => inputLower.includes(v)) || value;
+        value = value.charAt(0).toUpperCase() + value.slice(1);
+      } else if (currentStep === 'travelRegion' && inputLower === 'none') {
+        value = 'None';
       } else if (currentStep === 'travelRegion') {
-        value = [...Object.keys(patientInfo.travelRiskFactors || {}), 'none']
+        value = Object.keys(patientInfo.travelRiskFactors || {})
           .find((v) => inputLower.includes(v.toLowerCase())) || value;
         value = value.charAt(0).toUpperCase() + value.slice(1);
       } else if (currentStep === 'riskFactors' && (inputLower === 'skip' || inputLower === 'none')) {
@@ -124,7 +136,6 @@ const ContextHandler = {
         if (currentStep === 'submit') {
           addBotMessage(BotMessages.getStepPrompt('submit'));
         } else if (currentStep !== 'symptoms' && currentStep !== 'riskFactors') {
-          const nextStep = steps[steps.findIndex((s) => s.name === currentStep) + 1]?.name;
           if (nextStep) {
             setCurrentStep(nextStep);
             addBotMessage(BotMessages.getStepPrompt(nextStep));
