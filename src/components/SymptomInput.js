@@ -6,6 +6,7 @@ import BotMessages from './BotMessages';
 import ContextHandler from './ContextHandler';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
+import { drugOptions } from './DrugOptions';
 import calculateDiagnosis from './SymptomCalculations';
 
 const steps = [
@@ -18,7 +19,7 @@ const steps = [
   { name: 'severity', validate: (value) => ['mild', 'moderate', 'severe'].includes(value.toLowerCase()) },
   { name: 'travelRegion', validate: (value, travelRiskFactors) => ['none', ...Object.keys(travelRiskFactors || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
   { name: 'riskFactors', validate: (value, riskFactorWeights) => Array.isArray(value) && (value.length === 0 || value.every((v) => Object.keys(riskFactorWeights || {}).includes(v))) },
-  { name: 'drugHistory', validate: (value, drugHistoryWeights) => ['none', ...Object.keys(drugHistoryWeights || {})].map(v => v.toLowerCase()).includes(value.toLowerCase()) },
+  { name: 'drugHistory', validate: (value, drugOptions) => Array.isArray(value) && (value.length === 0 || value.every((v) => drugOptions.includes(v))) },
   { name: 'submit', validate: () => true },
 ];
 
@@ -32,10 +33,10 @@ const SymptomInput = ({
   setMessages,
   travelRiskFactors,
   riskFactorWeights,
-  drugHistoryWeights,
 }) => {
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [drugSuggestions, setDrugSuggestions] = useState([]);
   const [currentStep, setCurrentStep] = useState('welcome');
   const [isTyping, setIsTyping] = useState(false);
   const [typingText, setTypingText] = useState('');
@@ -77,7 +78,7 @@ const SymptomInput = ({
     if (field === 'symptoms') {
       setSelectedSymptoms(value);
     }
-    if (field !== 'symptoms' && field !== 'riskFactors') {
+    if (field !== 'symptoms' && field !== 'riskFactors' && field !== 'drugHistory') {
       const stepIndex = steps.findIndex((s) => s.name === field);
       const nextStep = steps[stepIndex + 1]?.name;
       if (nextStep) {
@@ -91,39 +92,49 @@ const SymptomInput = ({
     const text = e.target.value;
     setInput(text);
 
-    if (currentStep !== 'symptoms' || !text.trim()) {
+    if (currentStep === 'symptoms' && text.trim()) {
+      const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
+      const filteredSymptoms = availableSymptoms
+        .filter(
+          (symptom) =>
+            symptom.toLowerCase().includes(text.toLowerCase()) &&
+            !selectedSymptoms.includes(symptom)
+        )
+        .slice(0, 5);
+
+      const filteredCombinations = Object.keys(symptomCombinations)
+        .filter((combination) =>
+          combination.toLowerCase().includes(text.toLowerCase())
+        )
+        .slice(0, 5);
+
+      const combinedSuggestions = [
+        ...filteredCombinations.map((combination) => ({
+          type: 'combination',
+          text: combination,
+          symptoms: combination.split(', '),
+        })),
+        ...filteredSymptoms.map((symptom) => ({
+          type: 'single',
+          text: symptom,
+        })),
+      ];
+      setSuggestions(combinedSuggestions);
+      setDrugSuggestions([]);
+    } else if (currentStep === 'drugHistory' && text.trim()) {
+      const filteredDrugs = drugOptions
+        .filter(
+          (drug) =>
+            drug.toLowerCase().includes(text.toLowerCase()) &&
+            !patientInfo.drugHistory.includes(drug)
+        )
+        .slice(0, 5);
+      setDrugSuggestions(filteredDrugs);
       setSuggestions([]);
-      return;
+    } else {
+      setSuggestions([]);
+      setDrugSuggestions([]);
     }
-
-    const availableSymptoms = Array.isArray(symptomList) ? symptomList : Object.keys(symptomList);
-    const filteredSymptoms = availableSymptoms
-      .filter(
-        (symptom) =>
-          symptom.toLowerCase().includes(text.toLowerCase()) &&
-          !selectedSymptoms.includes(symptom)
-      )
-      .slice(0, 5);
-
-    const filteredCombinations = Object.keys(symptomCombinations)
-      .filter((combination) =>
-        combination.toLowerCase().includes(text.toLowerCase())
-      )
-      .slice(0, 5);
-
-    const combinedSuggestions = [
-      ...filteredCombinations.map((combination) => ({
-        type: 'combination',
-        text: combination,
-        symptoms: combination.split(', '),
-      })),
-      ...filteredSymptoms.map((symptom) => ({
-        type: 'single',
-        text: symptom,
-      })),
-    ];
-
-    setSuggestions(combinedSuggestions);
   };
 
   const handleSymptomSelect = (suggestion) => {
@@ -140,6 +151,21 @@ const SymptomInput = ({
     }
     setInput('');
     setSuggestions([]);
+  };
+
+  const handleDrugSelect = (drug) => {
+    const currentDrugs = patientInfo.drugHistory || [];
+    if (!currentDrugs.includes(drug)) {
+      const updatedDrugs = [...currentDrugs, drug];
+      handlePatientInfoChange('drugHistory', updatedDrugs);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'user', content: `Added drug: ${drug}`, isTyping: false },
+      ]);
+      addBotMessage(BotMessages.getStepPrompt('drugHistory'));
+    }
+    setInput('');
+    setDrugSuggestions([]);
   };
 
   const handleSubmit = (e) => {
@@ -174,6 +200,11 @@ const SymptomInput = ({
         setInput('');
         return;
       }
+    } else if ((currentStep === 'riskFactors' || currentStep === 'drugHistory') && (input.toLowerCase() === 'done' || input.toLowerCase() === 'none')) {
+      setCurrentStep(nextStep);
+      addBotMessage(BotMessages.getStepPrompt(nextStep));
+      setInput('');
+      return;
     } else if (currentStep === 'symptoms' && suggestions.length > 0) {
       const matchedSuggestion = suggestions.find(
         (s) => s.text.toLowerCase() === input.toLowerCase()
@@ -182,17 +213,20 @@ const SymptomInput = ({
         handleSymptomSelect(matchedSuggestion);
         return;
       }
-    } else if (currentStep === 'riskFactors' && (input.toLowerCase() === 'done' || input.toLowerCase() === 'skip')) {
-      setCurrentStep(nextStep);
-      addBotMessage(BotMessages.getStepPrompt(nextStep));
-      setInput('');
-      return;
+    } else if (currentStep === 'drugHistory' && drugSuggestions.length > 0) {
+      const matchedDrug = drugSuggestions.find(
+        (drug) => drug.toLowerCase() === input.toLowerCase()
+      );
+      if (matchedDrug) {
+        handleDrugSelect(matchedDrug);
+        return;
+      }
     }
 
-    const contextResult = ContextHandler.handleContext(input, currentStep, setMessages, addBotMessage, setInput, setCurrentStep, patientInfo);
+    const contextResult = ContextHandler.handleContext(input, currentStep, setMessages, addBotMessage, setInput, setCurrentStep, patientInfo, drugOptions);
     if (contextResult.isValid) {
       handlePatientInfoChange(currentStep, contextResult.value);
-      if (currentStep !== 'riskFactors') {
+      if (currentStep !== 'riskFactors' && currentStep !== 'drugHistory') {
         setCurrentStep(nextStep || 'submit');
         addBotMessage(BotMessages.getStepPrompt(nextStep || 'submit'));
       } else {
@@ -226,28 +260,29 @@ const SymptomInput = ({
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4">
-      {currentStep === 'symptoms' && suggestions.length > 0 && (
+      {(currentStep === 'symptoms' && suggestions.length > 0) || (currentStep === 'drugHistory' && drugSuggestions.length > 0) ? (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
-            {suggestions.map((suggestion, index) => (
+            {(currentStep === 'symptoms' ? suggestions : drugSuggestions).map((item, index) => (
               <button
                 key={index}
-                onClick={() => handleSymptomSelect(suggestion)}
+                onClick={() => currentStep === 'symptoms' ? handleSymptomSelect(item) : handleDrugSelect(item)}
                 className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
               >
-                {suggestion.text}
+                {item.text || item}
               </button>
             ))}
             <button
               onClick={() => {
-                if ((patientInfo.symptoms || []).length >= 2) {
-                  setCurrentStep(steps[steps.findIndex((s) => s.name === 'symptoms') + 1].name);
-                  addBotMessage(BotMessages.getStepPrompt(steps[steps.findIndex((s) => s.name === 'symptoms') + 1].name));
-                } else {
+                if (currentStep === 'symptoms' && (patientInfo.symptoms || []).length < 2) {
                   addBotMessage('Please provide at least two symptoms before typing "done".');
+                } else {
+                  setCurrentStep(steps[steps.findIndex((s) => s.name === currentStep) + 1].name);
+                  addBotMessage(BotMessages.getStepPrompt(steps[steps.findIndex((s) => s.name === currentStep) + 1].name));
                 }
                 setInput('');
                 setSuggestions([]);
+                setDrugSuggestions([]);
               }}
               className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
             >
@@ -255,7 +290,7 @@ const SymptomInput = ({
             </button>
           </div>
         </div>
-      )}
+      ) : null}
       {['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
         <PatientInfoSelector
           currentStep={currentStep}
@@ -264,7 +299,8 @@ const SymptomInput = ({
           setCurrentStep={setCurrentStep}
           travelRiskFactors={travelRiskFactors}
           riskFactorWeights={riskFactorWeights}
-          drugHistoryWeights={drugHistoryWeights}
+          drugSuggestions={drugSuggestions}
+          handleDrugSelect={handleDrugSelect}
         />
       )}
       {currentStep !== 'submit' && (
@@ -279,10 +315,12 @@ const SymptomInput = ({
                 ? 'Type "start" or "help"'
                 : currentStep === 'symptoms'
                 ? 'Type symptoms or "done"'
+                : currentStep === 'drugHistory'
+                ? 'Type drug name, "done", or "none"'
                 : currentStep === 'riskFactors'
                 ? 'Type risk factors, "done", or "none"'
-                : currentStep === 'travelRegion' || currentStep === 'drugHistory'
-                ? 'Type option or "none"'
+                : currentStep === 'travelRegion'
+                ? 'Type region or "none"'
                 : currentStep === 'age' || currentStep === 'duration'
                 ? `Enter ${currentStep} (number)`
                 : `Enter ${currentStep}`
