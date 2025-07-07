@@ -1,3 +1,4 @@
+// src/components/DiagnosisCard.jsx
 import React from 'react';
 import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 
