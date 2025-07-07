@@ -6,7 +6,7 @@ import DiagnosisCard from './DiagnosisCard';
 import { guidance } from '../data/guidance';
 import { travelRiskFactors } from '../data/TravelRiskFactors';
 import { riskFactorWeights } from '../data/RiskFactorWeights';
-import { drugHistoryWeights } from '../data/DrugHistoryWeights';
+import drugHistoryWeights from '../data/DrugHistoryWeights';
 
 const Checker = () => {
   return (
