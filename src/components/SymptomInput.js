@@ -165,8 +165,8 @@ const SymptomInput = ({
       }
     } else if (currentStep === 'symptoms' && input.toLowerCase() === 'done') {
       if ((patientInfo.symptoms || []).length >= 2) {
-        setCurrentStep(nextStep || 'duration');
-        addBotMessage(BotMessages.getStepPrompt(nextStep || 'duration'));
+        setCurrentStep(nextStep);
+        addBotMessage(BotMessages.getStepPrompt(nextStep));
         setInput('');
         return;
       } else {
@@ -182,61 +182,23 @@ const SymptomInput = ({
         handleSymptomSelect(matchedSuggestion);
         return;
       }
-    } else if (currentStepConfig && currentStepConfig.validate) {
-      let value = input.toLowerCase();
-      if (currentStep === 'age' || currentStep === 'duration') {
-        const numberMatch = input.match(/\d+/);
-        value = numberMatch ? parseInt(numberMatch[0], 10) : null;
-      } else if (currentStep === 'gender') {
-        value = ['male', 'female', 'other']
-          .find((v) => input.toLowerCase().includes(v)) || value;
-        value = value.charAt(0).toUpperCase() + value.slice(1);
-      } else if (currentStep === 'durationUnit') {
-        value = ['days', 'weeks', 'months']
-          .find((v) => input.toLowerCase().includes(v)) || value;
-        value = value.charAt(0).toUpperCase() + value.slice(1);
-      } else if (currentStep === 'severity') {
-        value = ['mild', 'moderate', 'severe']
-          .find((v) => input.toLowerCase().includes(v)) || value;
-        value = value.charAt(0).toUpperCase() + value.slice(1);
-      } else if (currentStep === 'travelRegion' && input.toLowerCase() === 'none') {
-        value = 'None';
-      } else if (currentStep === 'travelRegion') {
-        value = Object.keys(travelRiskFactors)
-          .find((v) => input.toLowerCase().includes(v.toLowerCase())) || value;
-        value = value.charAt(0).toUpperCase() + value.slice(1);
-      } else if (currentStep === 'riskFactors' && (input.toLowerCase() === 'skip' || input.toLowerCase() === 'none')) {
-        value = [];
-      } else if (currentStep === 'riskFactors') {
-        const riskMatch = Object.keys(riskFactorWeights)
-          .find((risk) => input.toLowerCase().includes(risk.toLowerCase()));
-        if (riskMatch) {
-          const currentRiskFactors = patientInfo.riskFactors || [];
-          value = currentRiskFactors.includes(riskMatch) ? currentRiskFactors : [...currentRiskFactors, riskMatch];
-        }
-      } else if (currentStep === 'drugHistory' && (input.toLowerCase() === 'skip' || input.toLowerCase() === 'none')) {
-        value = 'None';
-      } else if (currentStep === 'drugHistory') {
-        value = Object.keys(drugHistoryWeights)
-          .find((drug) => input.toLowerCase().includes(drug.toLowerCase())) || value;
-      } else if (currentStep === 'submit' && ['submit', 'done', 'finish'].includes(input.toLowerCase())) {
-        value = true;
-      }
-
-      if (value !== null && currentStepConfig.validate(value, travelRiskFactors, riskFactorWeights, drugHistoryWeights)) {
-        handlePatientInfoChange(currentStep, value);
-        setInput('');
-        if (currentStep === 'submit') {
-          addBotMessage(BotMessages.getStepPrompt('submit'));
-        } else if (currentStep === 'riskFactors') {
-          addBotMessage(BotMessages.getStepPrompt(currentStep));
-        }
-        return;
-      }
+    } else if (currentStep === 'riskFactors' && (input.toLowerCase() === 'done' || input.toLowerCase() === 'skip')) {
+      setCurrentStep(nextStep);
+      addBotMessage(BotMessages.getStepPrompt(nextStep));
+      setInput('');
+      return;
     }
 
-    if (ContextHandler.handleContext(input, currentStep, setMessages, addBotMessage, setInput, patientInfo)) {
-      return;
+    const contextResult = ContextHandler.handleContext(input, currentStep, setMessages, addBotMessage, setInput, setCurrentStep, patientInfo);
+    if (contextResult.isValid) {
+      handlePatientInfoChange(currentStep, contextResult.value);
+      if (currentStep !== 'riskFactors') {
+        setCurrentStep(nextStep || 'submit');
+        addBotMessage(BotMessages.getStepPrompt(nextStep || 'submit'));
+      } else {
+        addBotMessage(BotMessages.getStepPrompt(currentStep));
+      }
+      setInput('');
     }
   };
 
@@ -299,6 +261,7 @@ const SymptomInput = ({
           currentStep={currentStep}
           patientInfo={patientInfo}
           handlePatientInfoChange={handlePatientInfoChange}
+          setCurrentStep={setCurrentStep}
           travelRiskFactors={travelRiskFactors}
           riskFactorWeights={riskFactorWeights}
           drugHistoryWeights={drugHistoryWeights}
@@ -316,7 +279,9 @@ const SymptomInput = ({
                 ? 'Type "start" or "help"'
                 : currentStep === 'symptoms'
                 ? 'Type symptoms or "done"'
-                : currentStep === 'riskFactors' || currentStep === 'travelRegion' || currentStep === 'drugHistory'
+                : currentStep === 'riskFactors'
+                ? 'Type risk factors, "done", or "none"'
+                : currentStep === 'travelRegion' || currentStep === 'drugHistory'
                 ? 'Type option or "none"'
                 : currentStep === 'age' || currentStep === 'duration'
                 ? `Enter ${currentStep} (number)`
