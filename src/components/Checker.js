@@ -1,6 +1,7 @@
 // src/components/Checker.jsx
 import React, { useState, useEffect } from 'react';
 import SymptomInput from './SymptomInput';
+import SymptomChat from './SymptomChat';
 import DiagnosisCard from './DiagnosisCard';
 import calculateDiagnosis from './SymptomCalculations';
 import { guidance } from './guidance';
@@ -23,6 +24,7 @@ const Checker = () => {
     riskFactorWeights,
     drugHistoryWeights,
   });
+  const [messages, setMessages] = useState([{ role: 'bot', content: 'Hi there! I’m Dr. Jjingo, your symptom checker assistant. Type "start" to begin or "help" for guidance.', isTyping: false }]);
   const [diagnosis, setDiagnosis] = useState([]);
   const [errorMessage, setError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -86,23 +88,20 @@ const Checker = () => {
         <p className="text-sm text-muted-foreground mt-2">Developed by trusted healthcare professionals to explore possible diagnoses. Always consult a doctor for medical advice.</p>
       </div>
 
+      <SymptomChat messages={messages} error={errorMessage} />
+
       <SymptomInput
         selectedSymptoms={selectedSymptoms}
         setSelectedSymptoms={setSelectedSymptoms}
         patientInfo={patientInfo}
         setPatientInfo={setPatientInfo}
         onDiagnosisResults={handleDiagnosisResults}
+        messages={messages}
+        setMessages={setMessages}
         travelRiskFactors={travelRiskFactors}
         riskFactorWeights={riskFactorWeights}
         drugHistoryWeights={drugHistoryWeights}
       />
-
-      {errorMessage && (
-        <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-center">
-          <p className="font-medium text-sm">{errorMessage}</p>
-          <p className="text-sm mt-1">Please consult a healthcare provider immediately for serious symptoms.</p>
-        </div>
-      )}
 
       {diagnosis.length > 0 && (
         <div className="space-y-4">
