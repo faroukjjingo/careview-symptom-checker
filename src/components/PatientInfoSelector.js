@@ -13,7 +13,9 @@ const PatientInfoSelector = ({
 
   const getOptions = () => {
     let options = [];
-    if (currentStep === 'gender') {
+    if (currentStep === 'age' || currentStep === 'duration') {
+      return []; // Text input handled by SymptomInput
+    } else if (currentStep === 'gender') {
       options = ['Male', 'Female', 'Other'];
     } else if (currentStep === 'durationUnit') {
       options = ['Days', 'Weeks', 'Months'];
@@ -53,28 +55,32 @@ const PatientInfoSelector = ({
 
   return (
     <div className="space-y-2">
-      <input
-        type="text"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder={`Search ${currentStep}`}
-        className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
-      />
-      <select
-        onChange={handleSelect}
-        value=""
-        multiple={currentStep === 'riskFactors'}
-        className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
-      >
-        <option value="" disabled>
-          Select {currentStep}
-        </option>
-        {getOptions().map((option, index) => (
-          <option key={index} value={option}>
-            {option}
+      {['travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder={`Search ${currentStep}`}
+          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
+        />
+      )}
+      {currentStep !== 'age' && currentStep !== 'duration' && (
+        <select
+          onChange={handleSelect}
+          value=""
+          multiple={currentStep === 'riskFactors'}
+          className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
+        >
+          <option value="" disabled>
+            Select {currentStep}
           </option>
-        ))}
-      </select>
+          {getOptions().map((option, index) => (
+            <option key={index} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      )}
       {currentStep === 'riskFactors' && (
         <div className="flex flex-wrap gap-2">
           {(patientInfo.riskFactors || []).map((risk, index) => (
