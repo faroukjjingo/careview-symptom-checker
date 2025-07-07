@@ -34,26 +34,48 @@ export const SymptomCheckerProvider = ({ children, initialPatientInfo }) => {
 
   const handlePatientInfoChange = (field, value) => {
     console.log(`Updating ${field} with value: ${JSON.stringify(value)}`); // Debug log
-    setPatientInfo((prev) => ({ ...prev, [field]: value }));
+    setPatientInfo((prev) => {
+      const newInfo = { ...prev, [field]: value };
+      console.log(`New patientInfo: ${JSON.stringify(newInfo)}`); // Debug log
+      return newInfo;
+    });
     if (field === 'symptoms') {
       setSelectedSymptoms(value);
     }
     const stepIndex = steps.findIndex((s) => s.name === field);
     const nextStep = steps[stepIndex + 1]?.name;
     if (nextStep) {
-      if (field === 'symptoms' && value.length >= 2 && (patientInfo[field] || []).length >= 2) {
-        console.log(`Advancing from symptoms to ${nextStep}`); // Debug log
-        setCurrentStep(nextStep);
-        startTyping(BotMessages.getStepPrompt(nextStep));
-      } else if (field === 'riskFactors' || field === 'drugHistory') {
-        if (Array.isArray(value) && (value.length > 0 || value.length === 0)) { // Allow empty arrays for 'none'
+      if (field === 'symptoms' || field === 'riskFactors') {
+        if (Array.isArray(value) && (value.length >= 2 || value.length === 0)) { // Allow empty for 'none'
           console.log(`Advancing from ${field} to ${nextStep}`); // Debug log
           setCurrentStep(nextStep);
+          setMessages((prev) => [
+            ...prev.filter((msg) => !msg.isTyping),
+            { role: 'bot', content: BotMessages.getStepPrompt(nextStep), isTyping: true }
+          ]);
           startTyping(BotMessages.getStepPrompt(nextStep));
+        } else {
+          console.log(`Not advancing from ${field}: insufficient entries (${value.length})`); // Debug log
         }
-      } else if (field !== 'symptoms') {
+      } else if (field === 'drugHistory') {
+        if (Array.isArray(value)) { // Allow any array (including empty for 'none')
+          console.log(`Advancing from ${field} to ${nextStep}`); // Debug log
+          setCurrentStep(nextStep);
+          setMessages((prev) => [
+            ...prev.filter((msg) => !msg.isTyping),
+            { role: 'bot', content: BotMessages.getStepPrompt(nextStep), isTyping: true }
+          ]);
+          startTyping(BotMessages.getStepPrompt(nextStep));
+        } else {
+          console.log(`Not advancing from ${field}: invalid value ${value}`); // Debug log
+        }
+      } else {
         console.log(`Advancing from ${field} to ${nextStep}`); // Debug log
         setCurrentStep(nextStep);
+        setMessages((prev) => [
+          ...prev.filter((msg) => !msg.isTyping),
+          { role: 'bot', content: BotMessages.getStepPrompt(nextStep), isTyping: true }
+        ]);
         startTyping(BotMessages.getStepPrompt(nextStep));
       }
     } else {
