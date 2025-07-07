@@ -1,6 +1,6 @@
 import { symptomCombinations } from '../data/SymptomCombinations';
 import riskFactorWeights from '../data/RiskFactorWeights';
-import travelRiskFactors from '../dataTravelRiskFactors';
+import travelRiskFactors from '../data/TravelRiskFactors';
 import drugHistoryWeights from '../data/DrugHistoryWeights';
 
 const CONFIDENCE_THRESHOLDS = {
