@@ -137,7 +137,9 @@ const ContextHandler = {
       }
     }
 
-    return false;
+    addBotMessage(BotMessages.getErrorResponse(currentStep));
+    setInput('');
+    return true;
   },
 };
 
