@@ -72,17 +72,17 @@ const SymptomInput = ({
     const value = e.target.value;
     if (!value) return;
 
-    if (currentStep === 'symptoms') {
-      const symptomsToAdd = value.includes(', ') ? value.split(', ') : [value];
-      const uniqueNewSymptoms = symptomsToAdd.filter((symptom) => !selectedSymptoms.includes(symptom));
-      if (uniqueNewSymptoms.length > 0) {
-        const updatedSymptoms = [...selectedSymptoms, ...uniqueNewSymptoms];
-        handlePatientInfoChange('symptoms', updatedSymptoms);
+    if (currentStep === 'symptoms' || currentStep === 'riskFactors') {
+      const itemsToAdd = value.includes(', ') ? value.split(', ') : [value];
+      const uniqueNewItems = itemsToAdd.filter((item) => !(patientInfo[field] || []).includes(item));
+      if (uniqueNewItems.length > 0) {
+        const updatedItems = [...(patientInfo[field] || []), ...uniqueNewItems];
+        handlePatientInfoChange(field, updatedItems);
         setMessages((prev) => [
           ...prev,
-          { role: 'user', content: `Added: ${uniqueNewSymptoms.join(', ')}`, isTyping: false },
+          { role: 'user', content: `Added: ${uniqueNewItems.join(', ')}`, isTyping: false },
         ]);
-        addBotMessage(BotMessages.getSymptomPrompt());
+        addBotMessage(BotMessages.getStepPrompt(field));
       }
     } else {
       handlePatientInfoChange(currentStep, value);
@@ -90,16 +90,14 @@ const SymptomInput = ({
         ...prev,
         { role: 'user', content: `${currentStep.charAt(0).toUpperCase() + currentStep.slice(1)}: ${value}`, isTyping: false },
       ]);
-      const nextStep = ['gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep)
-        ? ContextHandler.steps[ContextHandler.steps.findIndex((s) => s.name === currentStep) + 1]?.name
-        : null;
+      const stepIndex = ContextHandler.steps.findIndex((s) => s.name === currentStep);
+      const nextStep = ContextHandler.steps[stepIndex + 1]?.name;
       if (nextStep) {
         setCurrentStep(nextStep);
         addBotMessage(BotMessages.getStepPrompt(nextStep));
       }
     }
     setSearchTerm('');
-    setInput('');
   };
 
   const handleSubmit = (e) => {
@@ -202,7 +200,7 @@ const SymptomInput = ({
         ))}
         <div ref={chatEndRef} />
       </div>
-      {['symptoms', 'gender', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
+      {['age', 'gender', 'symptoms', 'duration', 'durationUnit', 'severity', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
         <div className="space-y-2">
           {['symptoms', 'riskFactors', 'drugHistory', 'travelRegion'].includes(currentStep) && (
             <input
@@ -216,40 +214,57 @@ const SymptomInput = ({
           <select
             onChange={handleSelectChange}
             value=""
+            multiple={currentStep === 'symptoms' || currentStep === 'riskFactors'}
             className="w-full p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base"
           >
-            <option value="">Select {currentStep}</option>
+            <option value="" disabled>
+              Select {currentStep}
+            </option>
             {getOptions().map((option, index) => (
               <option key={index} value={option}>
                 {option}
               </option>
             ))}
           </select>
-          {currentStep === 'symptoms' && (
+          {(currentStep === 'symptoms' || currentStep === 'riskFactors') && (
             <div className="flex flex-wrap gap-2">
-              {selectedSymptoms.map((symptom, index) => (
+              {(patientInfo[currentStep] || []).map((item, index) => (
                 <span
                   key={index}
                   className="p-2 bg-secondary text-secondary-foreground rounded-lg text-sm"
                 >
-                  {symptom}
+                  {item}
                   <button
                     onClick={() => {
-                      const updatedSymptoms = selectedSymptoms.filter((s) => s !== symptom);
-                      handlePatientInfoChange('symptoms', updatedSymptoms);
+                      const updatedItems = patientInfo[currentStep].filter((s) => s !== item);
+                      handlePatientInfoChange(currentStep, updatedItems);
                       setMessages((prev) => [
                         ...prev,
-                        { role: 'user', content: `Removed: ${symptom}`, isTyping: false },
+                        { role: 'user', content: `Removed: ${item}`, isTyping: false },
                       ]);
-                      addBotMessage(BotMessages.getSymptomPrompt());
+                      addBotMessage(BotMessages.getStepPrompt(currentStep));
                     }}
                     className="ml-2 text-red-500 hover:text-red-700"
                   >
-                    &times;
+                    ×
                   </button>
                 </span>
               ))}
             </div>
+          )}
+          {['symptoms', 'travelRegion', 'riskFactors', 'drugHistory'].includes(currentStep) && (
+            <button
+              onClick={() => {
+                if (currentStep === 'symptoms' || currentStep === 'riskFactors') {
+                  handlePatientInfoChange(currentStep, []);
+                } else {
+                  handlePatientInfoChange(currentStep, 'None');
+                }
+              }}
+              className="p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-all text-sm"
+            >
+              Skip
+            </button>
           )}
         </div>
       )}
@@ -267,6 +282,8 @@ const SymptomInput = ({
                 ? 'Type "done" when finished'
                 : currentStep === 'riskFactors' || currentStep === 'travelRegion' || currentStep === 'drugHistory'
                 ? 'Type "none" or select above'
+                : currentStep === 'age' || currentStep === 'duration'
+                ? `Enter ${currentStep} (number)`
                 : `Enter ${currentStep}`
             }
             className="flex-1 p-2 border border-input rounded-lg bg-background text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-base touch-manipulation"
