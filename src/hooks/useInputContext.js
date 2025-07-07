@@ -88,16 +88,17 @@ const useInputContext = () => {
       const response = BotMessages.getInvalidWelcomeMessage();
       startTyping(response);
       return { isValid: false, response };
-    } else if (currentStep === 'symptoms' && inputLower === 'done') {
-      if ((patientInfo.symptoms || []).length >= 2) {
-        return { isValid: true, value: patientInfo.symptoms };
+    } else if ((currentStep === 'symptoms' || currentStep === 'riskFactors') && inputLower === 'done') {
+      if ((patientInfo[currentStep] || []).length >= 2) {
+        console.log(`Completing ${currentStep} with value: ${JSON.stringify(patientInfo[currentStep])}`); // Debug log
+        return { isValid: true, value: patientInfo[currentStep] };
       }
-      const response = 'Please provide at least two symptoms before typing "done".';
+      const response = `Please provide at least two ${currentStep} before typing 'done'.`;
       startTyping(response);
       return { isValid: false, response };
-    } else if ((currentStep === 'riskFactors' || currentStep === 'drugHistory') && (inputLower === 'done' || inputLower === 'none')) {
-      console.log(`Completing ${currentStep} with value: ${inputLower === 'none' ? '[]' : JSON.stringify(patientInfo[currentStep])}`); // Debug log
-      return { isValid: true, value: inputLower === 'none' ? [] : patientInfo[currentStep] };
+    } else if ((currentStep === 'symptoms' || currentStep === 'riskFactors' || currentStep === 'drugHistory') && inputLower === 'none') {
+      console.log(`Completing ${currentStep} with value: []`); // Debug log
+      return { isValid: true, value: [] };
     } else if (currentStep === 'symptoms' && suggestions.length > 0) {
       const matchedSuggestion = suggestions.find((s) => s.text.toLowerCase() === inputLower);
       if (matchedSuggestion) {
@@ -105,11 +106,25 @@ const useInputContext = () => {
         console.log(`Adding symptoms: ${symptomsToAdd}`); // Debug log
         return { isValid: true, value: [...(patientInfo.symptoms || []), ...symptomsToAdd] };
       }
+    } else if (currentStep === 'riskFactors' && suggestions.length > 0) {
+      const matchedSuggestion = suggestions.find((s) => s.text.toLowerCase() === inputLower);
+      if (matchedSuggestion) {
+        const riskFactorsToAdd = matchedSuggestion.type === 'combination' ? matchedSuggestion.riskFactors : [matchedSuggestion.text];
+        console.log(`Adding risk factors: ${riskFactorsToAdd}`); // Debug log
+        return { isValid: true, value: [...(patientInfo.riskFactors || []), ...riskFactorsToAdd] };
+      }
     } else if (currentStep === 'drugHistory' && drugSuggestions.length > 0) {
-      const matchedDrug = drugSuggestions.find((drug) => drug.toLowerCase() === inputLower);
-      if (matchedDrug) {
-        console.log(`Adding drug: ${matchedDrug}`); // Debug log
-        return { isValid: true, value: [...(patientInfo.drugHistory || []), matchedDrug] };
+      const matchedDrugs = drugSuggestions
+        .filter((drug) => drug.toLowerCase().includes(inputLower))
+        .slice(0, 5); // Limit to top 5 matches
+      if (matchedDrugs.length > 0) {
+        const matchedDrug = matchedDrugs.find((drug) => drug.toLowerCase() === inputLower);
+        if (matchedDrug) {
+          console.log(`Adding drug: ${matchedDrug}`); // Debug log
+          return { isValid: true, value: [...(patientInfo.drugHistory || []), matchedDrug] };
+        }
+        console.log(`No exact match, suggesting: ${matchedDrugs}`); // Debug log
+        return { isValid: false, response: `Did you mean one of these? ${matchedDrugs.join(', ')}` };
       }
     }
 
@@ -128,18 +143,6 @@ const useInputContext = () => {
       value = value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
     } else if (currentStep === 'travelRegion') {
       value = ['none', ...Object.keys(patientInfo.travelRiskFactors || {})]
-        .find((v) => inputLower.includes(v.toLowerCase())) || inputLower;
-      value = value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
-    } else if (currentStep === 'riskFactors') {
-      if (inputLower === 'none') {
-        value = [];
-      } else {
-        const riskMatch = Object.keys(patientInfo.riskFactorWeights || {})
-          .find((risk) => inputLower.includes(risk.toLowerCase()));
-        value = riskMatch ? [...(patientInfo.riskFactors || []), riskMatch] : inputLower;
-      }
-    } else if (currentStep === 'drugHistory') {
-      value = ['none', ...patientInfo.drugHistoryWeights]
         .find((v) => inputLower.includes(v.toLowerCase())) || inputLower;
       value = value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
     }
