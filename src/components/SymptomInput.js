@@ -6,9 +6,6 @@ import BotMessages from './BotMessages';
 import ContextHandler from './ContextHandler';
 import { symptomList } from './SymptomList';
 import { symptomCombinations } from './SymptomCombinations';
-import { travelRiskFactors } from './TravelRiskFactors';
-import { riskFactorWeights } from './RiskFactorWeights';
-import drugHistoryWeights from './DrugHistoryWeights';
 import calculateDiagnosis from './SymptomCalculations';
 
 const steps = [
@@ -31,18 +28,18 @@ const SymptomInput = ({
   patientInfo,
   setPatientInfo,
   onDiagnosisResults,
-  travelRiskFactors: parentTravelRiskFactors,
-  riskFactorWeights: parentRiskFactorWeights,
-  drugHistoryWeights: parentDrugHistoryWeights,
+  messages,
+  setMessages,
+  travelRiskFactors,
+  riskFactorWeights,
+  drugHistoryWeights,
 }) => {
-  const [messages, setMessages] = useState([{ role: 'bot', content: BotMessages.getWelcomeMessage(), isTyping: false }]);
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [currentStep, setCurrentStep] = useState('welcome');
   const [isTyping, setIsTyping] = useState(false);
   const [typingText, setTypingText] = useState('');
   const [typingIndex, setTypingIndex] = useState(0);
-  const chatEndRef = useRef(null);
   const inputRef = useRef(null);
 
   const addBotMessage = (text) => {
@@ -205,13 +202,13 @@ const SymptomInput = ({
       } else if (currentStep === 'travelRegion' && input.toLowerCase() === 'none') {
         value = 'None';
       } else if (currentStep === 'travelRegion') {
-        value = Object.keys(parentTravelRiskFactors || travelRiskFactors)
+        value = Object.keys(travelRiskFactors)
           .find((v) => input.toLowerCase().includes(v.toLowerCase())) || value;
         value = value.charAt(0).toUpperCase() + value.slice(1);
       } else if (currentStep === 'riskFactors' && (input.toLowerCase() === 'skip' || input.toLowerCase() === 'none')) {
         value = [];
       } else if (currentStep === 'riskFactors') {
-        const riskMatch = Object.keys(parentRiskFactorWeights || riskFactorWeights)
+        const riskMatch = Object.keys(riskFactorWeights)
           .find((risk) => input.toLowerCase().includes(risk.toLowerCase()));
         if (riskMatch) {
           const currentRiskFactors = patientInfo.riskFactors || [];
@@ -220,35 +217,27 @@ const SymptomInput = ({
       } else if (currentStep === 'drugHistory' && (input.toLowerCase() === 'skip' || input.toLowerCase() === 'none')) {
         value = 'None';
       } else if (currentStep === 'drugHistory') {
-        value = Object.keys(parentDrugHistoryWeights || drugHistoryWeights)
+        value = Object.keys(drugHistoryWeights)
           .find((drug) => input.toLowerCase().includes(drug.toLowerCase())) || value;
       } else if (currentStep === 'submit' && ['submit', 'done', 'finish'].includes(input.toLowerCase())) {
         value = true;
       }
 
-      if (value !== null && currentStepConfig.validate(value, parentTravelRiskFactors || travelRiskFactors, parentRiskFactorWeights || riskFactorWeights, parentDrugHistoryWeights || drugHistoryWeights)) {
+      if (value !== null && currentStepConfig.validate(value, travelRiskFactors, riskFactorWeights, drugHistoryWeights)) {
         handlePatientInfoChange(currentStep, value);
         setInput('');
         if (currentStep === 'submit') {
           addBotMessage(BotMessages.getStepPrompt('submit'));
-        } else if (currentStep !== 'symptoms' && currentStep !== 'riskFactors') {
-          if (nextStep) {
-            setCurrentStep(nextStep);
-            addBotMessage(BotMessages.getStepPrompt(nextStep));
-          }
-        } else {
+        } else if (currentStep === 'riskFactors') {
           addBotMessage(BotMessages.getStepPrompt(currentStep));
         }
         return;
       }
     }
 
-    if (ContextHandler.handleContext(input, currentStep, setMessages, addBotMessage, setInput)) {
+    if (ContextHandler.handleContext(input, currentStep, setMessages, addBotMessage, setInput, patientInfo)) {
       return;
     }
-
-    addBotMessage(BotMessages.getErrorResponse(currentStep));
-    setInput('');
   };
 
   useEffect(() => {
@@ -270,26 +259,11 @@ const SymptomInput = ({
   }, [currentStep, selectedSymptoms, patientInfo, onDiagnosisResults]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     inputRef.current?.focus();
-  }, [messages]);
+  }, []);
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4 max-h-[70dvh] flex flex-col">
-      <div className="flex-1 overflow-y-auto space-y-2">
-        {messages.map((msg, index) => (
-          <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <span
-              className={`inline-block p-2 rounded-lg max-w-[80%] ${
-                msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-              } ${msg.isTyping ? 'italic opacity-70' : ''}`}
-            >
-              {msg.content}
-            </span>
-          </div>
-        ))}
-        <div ref={chatEndRef} />
-      </div>
+    <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4">
       {currentStep === 'symptoms' && suggestions.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
@@ -325,9 +299,9 @@ const SymptomInput = ({
           currentStep={currentStep}
           patientInfo={patientInfo}
           handlePatientInfoChange={handlePatientInfoChange}
-          travelRiskFactors={parentTravelRiskFactors || travelRiskFactors}
-          riskFactorWeights={parentRiskFactorWeights || riskFactorWeights}
-          drugHistoryWeights={parentDrugHistoryWeights || drugHistoryWeights}
+          travelRiskFactors={travelRiskFactors}
+          riskFactorWeights={riskFactorWeights}
+          drugHistoryWeights={drugHistoryWeights}
         />
       )}
       {currentStep !== 'submit' && (
